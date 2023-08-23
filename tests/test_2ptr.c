@@ -1,12 +1,13 @@
 #include <sys/time.h>
 
+#include <assert.h>
 #include <err.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
 
 #define RB2_SMALL
-#define RB2_DIAGNOSTIC
+//#define RB2_DIAGNOSTIC
 #include "rbtree.h"
 
 #define TDEBUGF(fmt, ...)	fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
@@ -18,7 +19,19 @@
 #define SEED_RANDOM srandom
 #endif
 
-int ITER=100;
+#ifndef timespecsub
+#define	timespecsub(tsp, usp, vsp)					\
+	do {								\
+		(vsp)->tv_sec = (tsp)->tv_sec - (usp)->tv_sec;		\
+		(vsp)->tv_nsec = (tsp)->tv_nsec - (usp)->tv_nsec;	\
+		if ((vsp)->tv_nsec < 0) {				\
+			(vsp)->tv_sec--;				\
+			(vsp)->tv_nsec += 1000000000L;			\
+		}							\
+	} while (0)
+#endif
+
+int ITER=150000;
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 /* declarations */
@@ -49,23 +62,21 @@ RB2_PROTOTYPE(tree, node, node_link, compare)
 RB2_GENERATE(tree, node, node_link, compare)
 
 int
-main(int argc, char **argv)
+main()
 {
-	struct node *tmp, *ins, *it, *nodes;
+	struct node *tmp, *ins, *nodes;
 	int i, r, *perm, *nums;
         struct timespec start, end, diff;
 
-        // for determinism
-        SEED_RANDOM(423);
-
 	nodes = malloc((ITER + 5) * sizeof(struct node));
-	
-        TDEBUGF("generating a 'random' permutation");
-        for(int kk = 0; kk < 5000; kk++){
-        TDEBUGF("test number %d", kk);
-        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
         perm = malloc(sizeof(int) * ITER);
 	nums = malloc(sizeof(int) * ITER);
+
+        // for determinism
+        SEED_RANDOM(423);
+	
+        TDEBUGF("generating a 'random' permutation");
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
         perm[0] = 0;
 	nums[0] = 0;
         for(i = 1; i < ITER; i++) {
@@ -84,6 +95,7 @@ main(int argc, char **argv)
         int nperm[6] = {2, 6, 1, 4, 5, 3};
         int nperm[10] = {10, 3, 7, 8, 6, 1, 9, 2, 5, 4};
         int nperm[2] = {0, 1};
+
         int nperm[100] = {54, 47, 31, 35, 40, 73, 29, 66, 15, 45, 9, 71, 51, 32, 28, 62, 12, 46, 50, 26, 36, 91, 10, 76, 33, 43, 34, 58, 55, 72, 37, 24, 75, 4, 90, 88, 30, 25, 82, 18, 67, 81, 80, 65, 23, 41, 61, 86, 20, 99, 59, 14, 79, 21, 68, 27, 1, 7, 94, 44, 89, 64, 96, 2, 49, 53, 74, 13, 48, 42, 60, 52, 95, 17, 11, 0, 22, 97, 77, 69, 6, 16, 84, 78, 8, 83, 98, 93, 39, 38, 85, 70, 3, 19, 57, 5, 87, 92, 63, 56};
         ITER = 100;
         for(int i = 0; i < ITER; i++){
@@ -92,7 +104,8 @@ main(int argc, char **argv)
         */
 
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
-        TDEBUGF("done generating a 'random' permutation in: %ld.%09ld s", end.tv_sec - start.tv_sec, end.tv_nsec - start.tv_nsec);
+	timespecsub(&end, &start, &diff);
+        TDEBUGF("done generating a 'random' permutation in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 
 	RB2_INIT(&root);
 
@@ -100,9 +113,8 @@ main(int argc, char **argv)
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 	mix_operations(perm, ITER, nodes, ITER, ITER, 0, 0);
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
-	//timespecsub(&end, &start, &diff);
-        TDEBUGF("done random insertions in: %lld.%09ld s", end.tv_sec - start.tv_sec, end.tv_nsec - start.tv_nsec);
-        /*
+	timespecsub(&end, &start, &diff);
+        TDEBUGF("done random insertions in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 
 #ifdef DIAGNOSTIC
 	print_tree(RB2_ROOT(&root));
@@ -113,7 +125,7 @@ main(int argc, char **argv)
 	if (ins->size != ITER + 1)
 		errx(1, "size does not match");
 #endif
-
+/*
 	TDEBUGF("getting min");
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 	ins = RB2_MIN(tree, &root);
@@ -152,9 +164,9 @@ main(int argc, char **argv)
 		if (RB2_REMOVE(tree, &root, tmp) != tmp)
 			errx(1, "RB2_REMOVE error");
                 //print_tree(&root);
-                int rank = RB2_RANK(tree, RB2_ROOT(&root));
-                if (rank == -2)
-                        errx(1, "rank error");
+                //int rank = RB2_RANK(tree, RB2_ROOT(&root));
+                //if (rank == -2)
+                //        errx(1, "rank error");
 
 #ifdef DOAUGMENT
 		if (!(RB2_EMPTY(&root)) && (RB2_ROOT(&root))->size != ITER - 1 - i)
@@ -162,9 +174,8 @@ main(int argc, char **argv)
 #endif
 	}
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
-        }
-	//timespecsub(&end, &start, &diff);
-        //TDEBUGF("done root removals in: %lld.%09ld s", diff.tv_sec, diff.tv_nsec);
+	timespecsub(&end, &start, &diff);
+        TDEBUGF("done root removals in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 /*
 	RB2_FOREACH_SAFE(ins, tree, &root, tmp) {
 		if(RB2_REMOVE(tree, &root, ins) != ins)
@@ -304,6 +315,10 @@ main(int argc, char **argv)
 	timespecsub(&end, &start, &diff);
         TDEBUGF("done sequential removals in: %lld.%09ld s", diff.tv_sec, diff.tv_nsec);
         */
+
+	free(nodes);
+        free(perm);
+        free(nums);
 	exit(0);
 }
 
@@ -358,6 +373,8 @@ mix_operations(int *perm, int psize, struct node *nodes, int nsize, int insertio
 	int i;
 	struct node *tmp, *ins;
 	struct node it;
+        assert(psize == nsize);
+        assert(insertions + reads <= psize);
 
 	for(i = 0; i < insertions; i++) {
 		tmp = &(nodes[i]);
@@ -392,6 +409,12 @@ mix_operations(int *perm, int psize, struct node *nodes, int nsize, int insertio
 			ins = RB2_NFIND(tree, &root, &it);
 			if (ins->key < it.key)
 				errx(1, "RB2_NFIND failed");
+		}
+		for (i = insertions; i < insertions + reads; i++) {
+			it.key = perm[i];
+			ins = RB2_PFIND(tree, &root, &it);
+			if (ins->key > it.key)
+				errx(1, "RB2_PFIND failed");
 		}
 	}
 }

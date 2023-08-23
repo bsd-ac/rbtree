@@ -65,7 +65,7 @@
 #endif
 
 /*
- * debug macro
+ * debug macros
  */
 #ifndef RB2_DIAGNOSTIC
 #define _RB2_ASSERT(x)		do {} while (0)
@@ -176,7 +176,7 @@ struct name {						\
 _RB2_GET_CHILD(elm, dir, field) = (celm);			\
 } while (0)
 #define _RB2_REPLACE_CHILD(elm, dir, oelm, nelm, field)	do {	\
-_RB2_BITS(_RB2_GET_CHILD(elm, dir, field)) ^= _RB2_BITS(oelm) ^ _RB2_BITS(nelm);	\
+_RB2_BITS(_RB2_GET_CHILD(elm, dir, field)) ^= (__uintptr_t)_RB2_BITS(oelm) ^ _RB2_BITS(nelm);	\
 } while (0)
 #define _RB2_SWAP_CHILD_OR_ROOT(head, elm, oelm, nelm, field)	do {	\
 if (elm == NULL)							\
@@ -185,7 +185,7 @@ else									\
 	_RB2_REPLACE_CHILD(elm, (RB2_LEFT(elm, field) == (oelm) ? _RB2_LDIR : _RB2_RDIR), oelm, nelm, field);	\
 } while (0)
 
-#define _RB2_GET_RDIFF(elm, dir, field)			( _RB2_BITS(_RB2_GET_CHILD(elm, dir, field)) & 1U)
+#define _RB2_GET_RDIFF(elm, dir, field)			(_RB2_BITS(_RB2_GET_CHILD(elm, dir, field)) & 1U)
 #define _RB2_FLIP_RDIFF(elm, dir, field)		do {	\
 _RB2_BITS(_RB2_GET_CHILD(elm, dir, field)) ^= 1U;		\
 } while (0)
@@ -212,8 +212,8 @@ _RB2_BITS(_RB2_GET_CHILD(elm, dir, field)) = (_RB2_BITS(_RB2_GET_CHILD(elm, dir,
  *      gc1   gc2    c1 gc1
  */
 #define _RB2_ROTATE(elm, celm, dir, field) do {						\
-_RB2_SET_CHILD(elm, _RB2_ODIR(dir), _RB2_GET_CHILD(celm, dir, field), field);	\
-if (_RB2_PTR(_RB2_GET_CHILD(elm, _RB2_ODIR(dir), field)) != NULL)					\
+_RB2_SET_CHILD(elm, _RB2_ODIR(dir), _RB2_GET_CHILD(celm, dir, field), field);		\
+if (_RB2_PTR(_RB2_GET_CHILD(elm, _RB2_ODIR(dir), field)) != NULL)			\
 	_RB2_SET_PARENT(_RB2_PTR(_RB2_GET_CHILD(elm, _RB2_ODIR(dir), field)), elm, field);	\
 _RB2_SET_CHILD(celm, dir, elm, field);							\
 _RB2_SET_PARENT(elm, celm, field);							\
@@ -221,9 +221,9 @@ _RB2_SET_PARENT(elm, celm, field);							\
 
 
 /* returns -2 if the subtree is not rank balanced else returns the rank of the node */
-#define _RB2_GENERATE_RANK(name, type, field, cmp, attr)					\
+#define _RB2_GENERATE_RANK(name, type, field, cmp, attr)				\
 attr int										\
-name##_RB2_RANK(struct type *elm)							\
+name##_RB2_RANK(const struct type *elm)							\
 {											\
 	int lrank, rrank;								\
 	if (elm == NULL)								\
@@ -234,8 +234,8 @@ name##_RB2_RANK(struct type *elm)							\
 	rrank =  name##_RB2_RANK(RB2_RIGHT(elm, field));				\
 	if (rrank == -2)								\
 		return (-2);								\
-	lrank += _RB2_GET_RDIFF(elm, _RB2_LDIR, field) + 1;				\
-	rrank += _RB2_GET_RDIFF(elm, _RB2_RDIR, field) + 1;				\
+	lrank += (_RB2_GET_RDIFF(elm, _RB2_LDIR, field) == 1) ? 2 : 1;			\
+	rrank += (_RB2_GET_RDIFF(elm, _RB2_RDIR, field) == 1) ? 2 : 1;			\
 	if (lrank != rrank)								\
 		return (-2);								\
 	return (lrank);									\
@@ -302,8 +302,7 @@ name##_RB2_RANK(struct type *elm)							\
  *      /\      / \          /\              /\    /\  /\    /\
  *      --     c1 c2         --              --    --  --    --
  */
-#define _RB2_GENERATE_INTERNAL(name, type, field, cmp, attr)				\
-_RB2_GENERATE_RANK(name, type, field, cmp, attr)					\
+#define _RB2_GENERATE_INSERT(name, type, field, cmp, attr)				\
 											\
 attr struct type *									\
 name##_RB2_INSERT_BALANCE(struct name *head, struct type *parent, struct type *elm)	\
@@ -311,24 +310,21 @@ name##_RB2_INSERT_BALANCE(struct name *head, struct type *parent, struct type *e
 	struct type *child, *gpar;							\
 	__uintptr_t elmdir, sibdir;							\
 											\
+	child = NULL;									\
+	gpar = NULL;									\
 	do {										\
 		/* elm has not been promoted yet */					\
 		_RB2_ASSERT(parent != NULL);						\
 		_RB2_ASSERT(elm != NULL);						\
 		elmdir = RB2_LEFT(parent, field) == elm ? _RB2_LDIR : _RB2_RDIR;	\
 		if (_RB2_GET_RDIFF(parent, elmdir, field)) {				\
-			/* case (1)							\
-			 * current rdiff is 2 - will change to 1 after elm is promoted	\
-			 */								\
+			/* case (1) */							\
 			_RB2_FLIP_RDIFF(parent, elmdir, field);				\
 			return (NULL);							\
 		}									\
 		_RB2_STACK_POP(head, gpar);						\
 		_RB2_GET_PARENT(parent, gpar, field);					\
-		/* case (2)								\
-		 * in each of the subcases sibling is still a child of parent		\
-		 * and has it's rank difference with parent changed by 1		\
-		 */									\
+		/* case (2) */								\
 		sibdir = _RB2_ODIR(elmdir);						\
 		_RB2_FLIP_RDIFF(parent, sibdir, field);					\
 		if (_RB2_GET_RDIFF(parent, sibdir, field)) {				\
@@ -358,7 +354,6 @@ name##_RB2_INSERT_BALANCE(struct name *head, struct type *parent, struct type *e
 			_RB2_SET_CHILD(gpar, elmdir, _RB2_PTR(child), field);		\
 			_RB2_SET_RDIFF(gpar, elmdir, sibdir, field);			\
 		}									\
-		/*RB2_SWAP_CHILD(head, gpar, parent, child, field);*/			\
 		return (child);								\
 	} while ((parent = gpar) != NULL);						\
 	return (NULL);									\
@@ -369,14 +364,14 @@ attr struct type *									\
 name##_RB2_INSERT_FINISH(struct name *head, struct type *parent,			\
     __uintptr_t insdir, struct type *elm)						\
 {											\
-	struct type *tmp = NULL;							\
+	/*struct type *tmp = NULL;*/							\
 	__uintptr_t rdiff = 0;								\
 											\
 	_RB2_SET_PARENT(elm, parent, field);						\
 	rdiff = _RB2_GET_RDIFF(parent, insdir, field);					\
 	_RB2_SET_CHILD(parent, insdir, elm, field);					\
 	_RB2_SET_RDIFF(parent, insdir, rdiff, field);					\
-	tmp = name##_RB2_INSERT_BALANCE(head, parent, elm);				\
+	name##_RB2_INSERT_BALANCE(head, parent, elm);					\
 	return (NULL);									\
 }											\
 											\
@@ -416,6 +411,9 @@ name##_RB2_INSERT(struct name *head, struct type *elm)					\
 	_RB2_STACK_POP(head, parent);							\
 	return (name##_RB2_INSERT_FINISH(head, parent, insdir, elm));			\
 }											\
+
+#ifdef RB2_SMALL
+#define _RB2_GENERATE_CACHE(name, type, field, cmp, attr)				\
 											\
 attr struct type *									\
 name##_RB2_CACHE(struct name *head, struct type *elm)					\
@@ -435,7 +433,12 @@ name##_RB2_CACHE(struct name *head, struct type *elm)					\
 			return (tmp);							\
 	}										\
 	return (NULL);									\
-}											\
+}
+#else
+#define _RB2_GENERATE_CACHE(name, type, field, cmp, attr)
+#endif
+
+#define _RB2_GENERATE_FIND(name, type, field, cmp, attr)				\
 											\
 attr struct type *									\
 name##_RB2_FIND(struct name *head, struct type *elm)					\
@@ -474,7 +477,27 @@ name##_RB2_NFIND(struct name *head, struct type *elm)					\
 	return (res);									\
 }											\
 											\
-_RB2_GENERATE_REMOVE(name, type, field, cmp, attr)					\
+attr struct type *									\
+name##_RB2_PFIND(struct name *head, struct type *elm)					\
+{											\
+	struct type *tmp = RB2_ROOT(head);						\
+	struct type *res = NULL;							\
+	__typeof(cmp(NULL, NULL)) comp;							\
+	while (tmp) {									\
+		comp = cmp(elm, tmp);							\
+		if (comp > 0) {								\
+			res = tmp;							\
+			tmp = RB2_RIGHT(tmp, field);					\
+		}									\
+		else if (comp < 0)							\
+			tmp = RB2_LEFT(tmp, field);					\
+		else									\
+			return (tmp);							\
+	}										\
+	return (res);									\
+}
+
+#define _RB2_GENERATE_MINMAX(name, type, field, cmp, attr)				\
 											\
 attr struct type *									\
 name##_RB2_MINMAX(struct name *head, int dir)						\
@@ -576,6 +599,8 @@ name##_RB2_REMOVE_BALANCE(struct name *head, struct type *parent,			\
 	int extend;									\
 											\
 	_RB2_ASSERT(parent != NULL);							\
+	gpar = NULL;									\
+	sibling = NULL;									\
 	if (RB2_RIGHT(parent, field) == NULL && RB2_LEFT(parent, field) == NULL) {	\
 		_RB2_SET_CHILD(parent, _RB2_LDIR, NULL, field);				\
 		_RB2_SET_CHILD(parent, _RB2_RDIR, NULL, field);				\
@@ -648,10 +673,11 @@ attr struct type *									\
 name##_RB2_REMOVE_START(struct name *head, struct type *elm)				\
 {											\
 	/* elm is a node in the tree and the stack contains the parent of elm */	\
-	struct type *parent, *opar, *child, *rmin, *lmax, *top;				\
+	struct type *parent, *opar, *child, *rmin;					\
 	__uintptr_t elmdir;								\
 	size_t sz;									\
 											\
+	opar = NULL;									\
 	_RB2_STACK_TOP(head, opar);							\
 	_RB2_GET_PARENT(child, opar, field);						\
 											\
@@ -719,32 +745,44 @@ name##_RB2_REMOVE(struct name *head, struct type *elm)					\
 	return (name##_RB2_REMOVE_START(head, telm));					\
 }
 
+#define RB2_GENERATE(name, type, field, cmp)						\
+	_RB2_GENERATE_INTERNAL(name, type, field, cmp,)
+
+#define RB2_GENERATE_STATIC(name, type, field, cmp)					\
+	_RB2_GENERATE_INTERNAL(name, type, field, cmp, __attribute__((__unused__)) static)
+
+#define _RB2_GENERATE_INTERNAL(name, type, field, cmp, attr)				\
+	_RB2_GENERATE_RANK(name, type, field, cmp, attr)				\
+	_RB2_GENERATE_INSERT(name, type, field, cmp, attr)				\
+	_RB2_GENERATE_REMOVE(name, type, field, cmp, attr)				\
+	_RB2_GENERATE_CACHE(name, type, field, cmp, attr)				\
+	_RB2_GENERATE_FIND(name, type, field, cmp, attr)				\
+	_RB2_GENERATE_MINMAX(name, type, field, cmp, attr)
 
 #define RB2_PROTOTYPE(name, type, field, cmp)						\
-	RB2_PROTOTYPE_INTERNAL(name, type, field, cmp,)
+	_RB2_PROTOTYPE_INTERNAL(name, type, field, cmp,)
 
 #define RB2_PROTOTYPE_STATIC(name, type, field, cmp)					\
-	RB2_PROTOTYPE_INTERNAL(name, type, field, cmp, __attribute__((__unused__)) static)
+	_RB2_PROTOTYPE_INTERNAL(name, type, field, cmp, __attribute__((__unused__)) static)
 
-#define RB2_PROTOTYPE_INTERNAL(name, type, field, cmp, attr)				\
-attr struct type	*name##_RB2_INSERT(struct name *head, struct type *elm);	\
-attr struct type	*name##_RB2_REMOVE(struct name *head, struct type *elm);	\
-attr struct type	*name##_RB2_FIND(struct name *head, struct type *elm);		\
-attr struct type	*name##_RB2_NFIND(struct name *head, struct type *elm);
+#define _RB2_PROTOTYPE_INTERNAL(name, type, field, cmp, attr)			\
+int			 name##_RB2_RANK(const struct type *);			\
+attr struct type	*name##_RB2_INSERT(struct name *, struct type *);	\
+attr struct type	*name##_RB2_REMOVE(struct name *, struct type *);	\
+attr struct type	*name##_RB2_CACHE(struct name *, struct type *);	\
+attr struct type	*name##_RB2_FIND(struct name *, struct type *);		\
+attr struct type	*name##_RB2_NFIND(struct name *, struct type *);	\
+attr struct type	*name##_RB2_PFIND(struct name *, struct type *);	\
+attr struct type	*name##_RB2_MINMAX(struct name *, int);
 
+#define RB2_RANK(name, head)		name##_RB2_RANK(head)
 #define RB2_INSERT(name, head, elm)	name##_RB2_INSERT(head, elm)
 #define RB2_REMOVE(name, head, elm)	name##_RB2_REMOVE(head, elm)
 #define RB2_FIND(name, head, elm)	name##_RB2_FIND(head, elm)
 #define RB2_NFIND(name, head, elm)	name##_RB2_NFIND(head, elm)
+#define RB2_PFIND(name, head, elm)	name##_RB2_PFIND(head, elm)
 #define RB2_MIN(name, head)		name##_RB2_MINMAX(head, _RB2_LDIR)
 #define RB2_MAX(name, head)		name##_RB2_MINMAX(head, _RB2_RDIR)
-#define RB2_RANK(name, elm)		name##_RB2_RANK(elm)
 
-#define RB2_GENERATE(name, type, field, cmp)						\
-	_RB2_GENERATE_INTERNAL(name, type, field, cmp,)
-
-
-#define RB2_GENERATE_STATIC(name, type, field, cmp)					\
-	_RB2_GENERATE_INTERNAL(name, type, field, cmp, __attribute__((__unused__)) static)
 
 #endif /* _SYS_RBTREE_H_ */

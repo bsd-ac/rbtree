@@ -8,8 +8,7 @@ project('rbtree', 'c',
 
 c       = meson.get_compiler('c')
 
-add_global_arguments(['-Wno-unused-parameter', '-Wno-unused-function', '-Wno-unused-variable',
-                        '-Wno-unused-but-set-variable'],
+add_global_arguments(['-Wno-unused-function'],
                      language: 'c')
 
 incdir = include_directories('include')
