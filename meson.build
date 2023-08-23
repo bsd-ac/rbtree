@@ -14,5 +14,4 @@ add_global_arguments(['-Wno-unused-function'],
 incdir = include_directories('include')
 
 subdir('include')
-subdir('man')
 subdir('tests')
