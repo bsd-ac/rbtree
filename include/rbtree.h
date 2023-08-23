@@ -120,12 +120,12 @@ struct name {						\
 
 #define _RB2_STACK_POP(head, oelm)	do {	\
 if ((head)->top > 0)				\
-	*oelm = (head)->stack[--(head)->top];	\
+	oelm = (head)->stack[--(head)->top];	\
 } while (0)
 
 #define _RB2_STACK_TOP(head, oelm)	do {	\
 if ((head)->top > 0)				\
-	*oelm = (head)->stack[(head)->top - 1];	\
+	oelm = (head)->stack[(head)->top - 1];	\
 } while (0)
 
 #define _RB2_STACK_CLEAR(head)		do {	\
@@ -170,7 +170,6 @@ struct name {						\
 
 /*
  * element macros
- * element internal fields should not be referenced after this section
  */
 #define _RB2_GET_CHILD(elm, dir, field)			(elm)->field.child[dir]
 #define _RB2_SET_CHILD(elm, dir, celm, field)		do {	\
@@ -235,8 +234,8 @@ name##_RB2_RANK(struct type *elm)							\
 	rrank =  name##_RB2_RANK(RB2_RIGHT(elm, field));				\
 	if (rrank == -2)								\
 		return (-2);								\
-	lrank += _RB2_GET_RDIFF(elm, _RB2_LDIR, field) + 1;					\
-	rrank += _RB2_GET_RDIFF(elm, _RB2_RDIR, field) + 1;					\
+	lrank += _RB2_GET_RDIFF(elm, _RB2_LDIR, field) + 1;				\
+	rrank += _RB2_GET_RDIFF(elm, _RB2_RDIR, field) + 1;				\
 	if (lrank != rrank)								\
 		return (-2);								\
 	return (lrank);									\
@@ -304,7 +303,7 @@ name##_RB2_RANK(struct type *elm)							\
  *      --     c1 c2         --              --    --  --    --
  */
 #define _RB2_GENERATE_INTERNAL(name, type, field, cmp, attr)				\
-_RB2_GENERATE_RANK(name, type, field, cmp, attr)						\
+_RB2_GENERATE_RANK(name, type, field, cmp, attr)					\
 											\
 attr struct type *									\
 name##_RB2_INSERT_BALANCE(struct name *head, struct type *parent, struct type *elm)	\
@@ -324,8 +323,8 @@ name##_RB2_INSERT_BALANCE(struct name *head, struct type *parent, struct type *e
 			_RB2_FLIP_RDIFF(parent, elmdir, field);				\
 			return (NULL);							\
 		}									\
-		_RB2_STACK_POP(head, &gpar);						\
-		_RB2_GET_PARENT(parent, &gpar, field);					\
+		_RB2_STACK_POP(head, gpar);						\
+		_RB2_GET_PARENT(parent, gpar, field);					\
 		/* case (2)								\
 		 * in each of the subcases sibling is still a child of parent		\
 		 * and has it's rank difference with parent changed by 1		\
@@ -414,7 +413,7 @@ name##_RB2_INSERT(struct name *head, struct type *elm)					\
 		_RB2_STACK_PUSH(head, parent);						\
 	}										\
 	/* the stack contains all the nodes upto and including parent */		\
-	_RB2_STACK_POP(head, &parent);							\
+	_RB2_STACK_POP(head, parent);							\
 	return (name##_RB2_INSERT_FINISH(head, parent, insdir, elm));			\
 }											\
 											\
@@ -581,15 +580,15 @@ name##_RB2_REMOVE_BALANCE(struct name *head, struct type *parent,			\
 		_RB2_SET_CHILD(parent, _RB2_LDIR, NULL, field);				\
 		_RB2_SET_CHILD(parent, _RB2_RDIR, NULL, field);				\
 		elm = parent;								\
-		_RB2_STACK_POP(head, &parent);						\
-		_RB2_GET_PARENT(parent, &parent, field);				\
+		_RB2_STACK_POP(head, parent);						\
+		_RB2_GET_PARENT(parent, parent, field);					\
 		if (parent == NULL) {							\
 			return (NULL);							\
 		}									\
 	}										\
 	do {										\
-		_RB2_STACK_POP(head, &gpar);						\
-		_RB2_GET_PARENT(parent, &gpar, field);					\
+		_RB2_STACK_POP(head, gpar);						\
+		_RB2_GET_PARENT(parent, gpar, field);					\
 		elmdir = RB2_LEFT(parent, field) == elm ? _RB2_LDIR : _RB2_RDIR;	\
 		if (_RB2_GET_RDIFF(parent, elmdir, field) == 0) {			\
 			/* case (1) */							\
@@ -653,14 +652,14 @@ name##_RB2_REMOVE_START(struct name *head, struct type *elm)				\
 	__uintptr_t elmdir;								\
 	size_t sz;									\
 											\
-	_RB2_STACK_TOP(head, &opar);							\
-	_RB2_GET_PARENT(child, &opar, field);						\
+	_RB2_STACK_TOP(head, opar);							\
+	_RB2_GET_PARENT(child, opar, field);						\
 											\
 	/* first find the element to swap with oelm */					\
 	child = _RB2_GET_CHILD(elm, _RB2_LDIR, field);					\
 	rmin = RB2_RIGHT(elm, field);							\
-	if (rmin == NULL || _RB2_PTR(child) == NULL) {						\
-		rmin = child = (rmin == NULL ? _RB2_PTR(child) : rmin);				\
+	if (rmin == NULL || _RB2_PTR(child) == NULL) {					\
+		rmin = child = (rmin == NULL ? _RB2_PTR(child) : rmin);			\
 		parent = opar;								\
 	}										\
 	else {										\
@@ -677,8 +676,8 @@ name##_RB2_REMOVE_START(struct name *head, struct type *elm)				\
 		if (parent != rmin) {							\
 			_RB2_SET_PARENT(parent, rmin, field);				\
 			_RB2_SET_CHILD(rmin, _RB2_RDIR, _RB2_GET_CHILD(elm, _RB2_RDIR, field), field);	\
-			_RB2_GET_PARENT(rmin, &parent, field);				\
-			_RB2_STACK_POP(head, &parent);					\
+			_RB2_GET_PARENT(rmin, parent, field);				\
+			_RB2_STACK_POP(head, parent);					\
 			if (parent != NULL) {						\
 				_RB2_BITS(_RB2_GET_CHILD(parent, _RB2_LDIR, field)) ^= _RB2_BITS(child) ^ _RB2_BITS(rmin);	\
 			}								\
@@ -715,7 +714,7 @@ name##_RB2_REMOVE(struct name *head, struct type *elm)					\
 	telm = name##_RB2_CACHE(head, elm);						\
 	if (telm == NULL)								\
 		return (NULL);								\
-	_RB2_STACK_POP(head, &telm);							\
+	_RB2_STACK_POP(head, telm);							\
 	_RB2_ASSERT((cmp(telm, elm)) == 0);						\
 	return (name##_RB2_REMOVE_START(head, telm));					\
 }
