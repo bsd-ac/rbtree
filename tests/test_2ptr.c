@@ -18,7 +18,7 @@
 #define SEED_RANDOM srandom
 #endif
 
-int ITER=1000;
+int ITER=100;
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 /* declarations */
@@ -56,15 +56,16 @@ main(int argc, char **argv)
         struct timespec start, end, diff;
 
         // for determinism
-        SEED_RANDOM(420);
+        SEED_RANDOM(423);
 
 	nodes = malloc((ITER + 5) * sizeof(struct node));
 	
         TDEBUGF("generating a 'random' permutation");
+        for(int kk = 0; kk < 5000; kk++){
+        TDEBUGF("test number %d", kk);
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
         perm = malloc(sizeof(int) * ITER);
 	nums = malloc(sizeof(int) * ITER);
-
         perm[0] = 0;
 	nums[0] = 0;
         for(i = 1; i < ITER; i++) {
@@ -74,10 +75,17 @@ main(int argc, char **argv)
 		nums[i] = i;
         }
         /*
+        fprintf(stderr, "{");
+        for(int i = 0; i < ITER; i++) {
+                fprintf(stderr, "%d, ", perm[i]);
+        }
+        fprintf(stderr, "}\n");
         int nperm[10] = {2, 4, 9, 7, 8, 3, 0, 1, 6, 5};
         int nperm[6] = {2, 6, 1, 4, 5, 3};
         int nperm[10] = {10, 3, 7, 8, 6, 1, 9, 2, 5, 4};
-        ITER = 10;
+        int nperm[2] = {0, 1};
+        int nperm[100] = {54, 47, 31, 35, 40, 73, 29, 66, 15, 45, 9, 71, 51, 32, 28, 62, 12, 46, 50, 26, 36, 91, 10, 76, 33, 43, 34, 58, 55, 72, 37, 24, 75, 4, 90, 88, 30, 25, 82, 18, 67, 81, 80, 65, 23, 41, 61, 86, 20, 99, 59, 14, 79, 21, 68, 27, 1, 7, 94, 44, 89, 64, 96, 2, 49, 53, 74, 13, 48, 42, 60, 52, 95, 17, 11, 0, 22, 97, 77, 69, 6, 16, 84, 78, 8, 83, 98, 93, 39, 38, 85, 70, 3, 19, 57, 5, 87, 92, 63, 56};
+        ITER = 100;
         for(int i = 0; i < ITER; i++){
                 perm[i] = nperm[i];
         }
@@ -93,7 +101,7 @@ main(int argc, char **argv)
 	mix_operations(perm, ITER, nodes, ITER, ITER, 0, 0);
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	//timespecsub(&end, &start, &diff);
-        //TDEBUGF("done random insertions in: %lld.%09ld s", diff.tv_sec, diff.tv_nsec);
+        TDEBUGF("done random insertions in: %lld.%09ld s", end.tv_sec - start.tv_sec, end.tv_nsec - start.tv_nsec);
         /*
 
 #ifdef DIAGNOSTIC
@@ -123,32 +131,41 @@ main(int argc, char **argv)
         TDEBUGF("done getting max in: %lld.%09ld s", diff.tv_sec, diff.tv_nsec);
 	if (ins->key != ITER + 5)
 		errx(1, "max does not match");
-
+*/
 	ins = RB2_ROOT(&root);
 	if (RB2_REMOVE(tree, &root, ins) != ins)
 		errx(1, "RB2_REMOVE failed");
+        //print_tree(&root);
+/*
 #ifdef DOAUGMENT
 	if ((RB2_ROOT(&root))->size != ITER)
 	  errx(1, "RB2_REMOVE initial size error: %zu", (RB2_ROOT(&root))->size);
 #endif
-
+*/
 	TDEBUGF("doing root removals");
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 	for (i = 0; i < ITER; i++) {
 		tmp = RB2_ROOT(&root);
 		if (tmp == NULL)
 			errx(1, "RB2_ROOT error");
+                //TDEBUGF("removal number %d = %d", i, tmp->key);
 		if (RB2_REMOVE(tree, &root, tmp) != tmp)
 			errx(1, "RB2_REMOVE error");
+                //print_tree(&root);
+                int rank = RB2_RANK(tree, RB2_ROOT(&root));
+                if (rank == -2)
+                        errx(1, "rank error");
+
 #ifdef DOAUGMENT
 		if (!(RB2_EMPTY(&root)) && (RB2_ROOT(&root))->size != ITER - 1 - i)
 			errx(1, "RB2_REMOVE size error");
 #endif
 	}
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
-	timespecsub(&end, &start, &diff);
-        TDEBUGF("done root removals in: %lld.%09ld s", diff.tv_sec, diff.tv_nsec);
-
+        }
+	//timespecsub(&end, &start, &diff);
+        //TDEBUGF("done root removals in: %lld.%09ld s", diff.tv_sec, diff.tv_nsec);
+/*
 	RB2_FOREACH_SAFE(ins, tree, &root, tmp) {
 		if(RB2_REMOVE(tree, &root, ins) != ins)
 			errx(1, "RB2_REMOVE error");
@@ -310,7 +327,7 @@ print_helper(const struct node *n, int indent)
 static void
 print_tree(const struct tree *t)
 {
-	print_helper(RB2_ROOT(t), 0);
+	if (RB2_ROOT(t)) print_helper(RB2_ROOT(t), 0);
 }
 
 static int 
@@ -348,15 +365,15 @@ mix_operations(int *perm, int psize, struct node *nodes, int nsize, int insertio
 		tmp->size = 1;
 		tmp->height = 1;
 		tmp->key = perm[i];
-                TDEBUGF("inserting %d", tmp->key);
+                //TDEBUGF("inserting %d", tmp->key);
 		if (RB2_INSERT(tree, &root, tmp) != NULL)
 			errx(1, "RB2_INSERT failed");
-                print_tree(&root);
-                int rank = RB2_RANK(tree, RB2_ROOT(&root));
-                TDEBUGF("rank: %d", rank);
-                if (rank == -2)
-                        errx(1, "rank error");
-                TDEBUGF("%p:%p", (void *)root.root->node_link.child[0], (void *)root.root->node_link.child[1]);
+                //print_tree(&root);
+                //int rank = RB2_RANK(tree, RB2_ROOT(&root));
+                //TDEBUGF("rank: %d", rank);
+                //if (rank == -2)
+                //        errx(1, "rank error");
+                //TDEBUGF("%p:%p", (void *)root.root->node_link.child[0], (void *)root.root->node_link.child[1]);
 	}
 	tmp = &(nodes[insertions]);
 	tmp->key = ITER + 5;
