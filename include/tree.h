@@ -115,7 +115,7 @@ struct name {						\
 } while (0)
 
 #define _RB_STACK_PUSH(head, elm)	do {	\
-(head)->stack[head->top++] = elm;		\
+(head)->stack[(head)->top++] = elm;		\
 } while (0)
 
 #define _RB_STACK_POP(head, oelm)	do {	\
@@ -130,9 +130,10 @@ if ((head)->top > 0)				\
 
 #define _RB_STACK_CLEAR(head)		do {	\
 (head)->top = 0;				\
+_RB_STACK_PUSH(head, NULL);			\
 } while (0)
 
-#define _RB_STACK_SET(head, i, elm) do {	\
+#define _RB_STACK_SET(head, i, elm)	do {	\
 (head)->stack[i] = elm;				\
 } while (0)
 
@@ -186,8 +187,8 @@ else									\
 } while (0)
 
 #define _RB_GET_RDIFF(elm, dir, field)			(_RB_BITS(_RB_GET_CHILD(elm, dir, field)) & 1U)
-#define _RB_FLIP_RDIFF(elm, dir, field)		do {	\
-_RB_BITS(_RB_GET_CHILD(elm, dir, field)) ^= 1U;		\
+#define _RB_FLIP_RDIFF(elm, dir, field)			do {	\
+_RB_BITS(_RB_GET_CHILD(elm, dir, field)) ^= 1U;			\
 } while (0)
 #define _RB_SET_RDIFF(elm, dir, rdiff, field)		do {	\
 _RB_ASSERT(rdiff == 0 || rdiff == 1);				\
@@ -213,7 +214,7 @@ _RB_BITS(_RB_GET_CHILD(elm, dir, field)) = (_RB_BITS(_RB_GET_CHILD(elm, dir, fie
  */
 #define _RB_ROTATE(elm, celm, dir, field) do {						\
 _RB_SET_CHILD(elm, _RB_ODIR(dir), _RB_GET_CHILD(celm, dir, field), field);		\
-if (_RB_PTR(_RB_GET_CHILD(elm, _RB_ODIR(dir), field)) != NULL)			\
+if (_RB_PTR(_RB_GET_CHILD(elm, _RB_ODIR(dir), field)) != NULL)				\
 	_RB_SET_PARENT(_RB_PTR(_RB_GET_CHILD(elm, _RB_ODIR(dir), field)), elm, field);	\
 _RB_SET_CHILD(celm, dir, elm, field);							\
 _RB_SET_PARENT(elm, celm, field);							\
@@ -221,7 +222,7 @@ _RB_SET_PARENT(elm, celm, field);							\
 
 
 /* returns -2 if the subtree is not rank balanced else returns the rank of the node */
-#define _RB_GENERATE_RANK(name, type, field, cmp, attr)				\
+#define _RB_GENERATE_RANK(name, type, field, cmp, attr)					\
 attr int										\
 name##_RB_RANK(const struct type *elm)							\
 {											\
@@ -231,7 +232,7 @@ name##_RB_RANK(const struct type *elm)							\
 	lrank =  name##_RB_RANK(RB_LEFT(elm, field));					\
 	if (lrank == -2)								\
 		return (-2);								\
-	rrank =  name##_RB_RANK(RB_RIGHT(elm, field));				\
+	rrank =  name##_RB_RANK(RB_RIGHT(elm, field));					\
 	if (rrank == -2)								\
 		return (-2);								\
 	lrank += (_RB_GET_RDIFF(elm, _RB_LDIR, field) == 1) ? 2 : 1;			\
@@ -316,7 +317,7 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent, struct type *el
 		/* elm has not been promoted yet */					\
 		_RB_ASSERT(parent != NULL);						\
 		_RB_ASSERT(elm != NULL);						\
-		elmdir = RB_LEFT(parent, field) == elm ? _RB_LDIR : _RB_RDIR;	\
+		elmdir = RB_LEFT(parent, field) == elm ? _RB_LDIR : _RB_RDIR;		\
 		if (_RB_GET_RDIFF(parent, elmdir, field)) {				\
 			/* case (1) */							\
 			_RB_FLIP_RDIFF(parent, elmdir, field);				\
@@ -361,7 +362,7 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent, struct type *el
 											\
 /* Inserts a node into the RB tree */							\
 attr struct type *									\
-name##_RB_INSERT_FINISH(struct name *head, struct type *parent,			\
+name##_RB_INSERT_FINISH(struct name *head, struct type *parent,				\
     __uintptr_t insdir, struct type *elm)						\
 {											\
 	/*struct type *tmp = NULL;*/							\
@@ -384,7 +385,6 @@ name##_RB_INSERT(struct name *head, struct type *elm)					\
 	__uintptr_t insdir;								\
 											\
 	_RB_STACK_CLEAR(head);								\
-	_RB_STACK_PUSH(head, NULL);							\
 	_RB_SET_CHILD(elm, _RB_LDIR, NULL, field);					\
 	_RB_SET_CHILD(elm, _RB_RDIR, NULL, field);					\
 	tmp = RB_ROOT(head);								\
@@ -421,7 +421,6 @@ name##_RB_CACHE(struct name *head, struct type *elm)					\
 	struct type *tmp = RB_ROOT(head);						\
 	__typeof(cmp(NULL, NULL)) comp;							\
 	_RB_STACK_CLEAR(head);								\
-	_RB_STACK_PUSH(head, NULL);							\
 	while (tmp) {									\
 		_RB_STACK_PUSH(head, tmp);						\
 		comp = cmp(elm, tmp);							\
@@ -438,12 +437,12 @@ name##_RB_CACHE(struct name *head, struct type *elm)					\
 #define _RB_GENERATE_CACHE(name, type, field, cmp, attr)
 #endif
 
-#define _RB_GENERATE_FIND(name, type, field, cmp, attr)				\
+#define _RB_GENERATE_FIND(name, type, field, cmp, attr)		               		\
 											\
 attr struct type *									\
 name##_RB_FIND(struct name *head, struct type *elm)					\
 {											\
-	struct type *tmp = RB_ROOT(head);						\
+	struct type *res, *tmp = RB_ROOT(head);						\
 	__typeof(cmp(NULL, NULL)) comp;							\
 	while (tmp) {									\
 		comp = cmp(elm, tmp);							\
@@ -474,7 +473,7 @@ name##_RB_NFIND(struct name *head, struct type *elm)					\
 		else									\
 			return (tmp);							\
 	}										\
-	return (res);									\
+	return (res);						                	\
 }											\
 											\
 attr struct type *									\
@@ -506,7 +505,7 @@ name##_RB_MINMAX(struct name *head, int dir)						\
 	struct type *parent = NULL;							\
 	while (tmp) {									\
 		parent = tmp;								\
-		tmp = _RB_GET_CHILD(tmp, dir, field);					\
+		tmp = _RB_PTR(_RB_GET_CHILD(tmp, dir, field));				\
 	}										\
 	return (parent);								\
 }
@@ -594,7 +593,7 @@ attr struct type *									\
 name##_RB_REMOVE_BALANCE(struct name *head, struct type *parent,			\
 	struct type *elm)								\
 {											\
-	struct type *gpar, *sibling;							\
+	struct type *gpar, *sibling;						        \
 	__uintptr_t elmdir, sibdir, ssdiff, sodiff;					\
 	int extend;									\
 											\
@@ -614,7 +613,7 @@ name##_RB_REMOVE_BALANCE(struct name *head, struct type *parent,			\
 	do {										\
 		_RB_STACK_POP(head, gpar);						\
 		_RB_GET_PARENT(parent, gpar, field);					\
-		elmdir = RB_LEFT(parent, field) == elm ? _RB_LDIR : _RB_RDIR;	\
+		elmdir = RB_LEFT(parent, field) == elm ? _RB_LDIR : _RB_RDIR;		\
 		if (_RB_GET_RDIFF(parent, elmdir, field) == 0) {			\
 			/* case (1) */							\
 			_RB_FLIP_RDIFF(parent, elmdir, field);				\
@@ -630,18 +629,18 @@ name##_RB_REMOVE_BALANCE(struct name *head, struct type *parent,			\
 		/* case 2.2 */								\
 		sibling = _RB_PTR(_RB_GET_CHILD(parent, sibdir, field));		\
 		_RB_ASSERT(sibling != NULL);						\
-		ssdiff = _RB_GET_RDIFF(sibling, elmdir, field);			\
-		sodiff = _RB_GET_RDIFF(sibling, sibdir, field);			\
+		ssdiff = _RB_GET_RDIFF(sibling, elmdir, field);				\
+		sodiff = _RB_GET_RDIFF(sibling, sibdir, field);				\
 		if (ssdiff && sodiff) {							\
 			/* case 2.2a */							\
-			_RB_FLIP_RDIFF(sibling, elmdir, field);			\
-			_RB_FLIP_RDIFF(sibling, sibdir, field);			\
+			_RB_FLIP_RDIFF(sibling, elmdir, field);				\
+			_RB_FLIP_RDIFF(sibling, sibdir, field);				\
 			continue;							\
 		}									\
 		extend = 0;								\
 		if (sodiff) {								\
 			/* case 2.2c */							\
-			_RB_FLIP_RDIFF(sibling, sibdir, field);			\
+			_RB_FLIP_RDIFF(sibling, sibdir, field);				\
 			_RB_FLIP_RDIFF(parent, elmdir, field);				\
 			elm = _RB_PTR(_RB_GET_CHILD(sibling, elmdir, field));		\
 			_RB_ROTATE(sibling, elm, sibdir, field);			\
@@ -649,18 +648,18 @@ name##_RB_REMOVE_BALANCE(struct name *head, struct type *parent,			\
 			extend = 1;							\
 		} else {								\
 			/* case 2.2b */							\
-			_RB_FLIP_RDIFF(sibling, sibdir, field);			\
+			_RB_FLIP_RDIFF(sibling, sibdir, field);				\
 			if (ssdiff) {							\
-				_RB_FLIP_RDIFF(sibling, elmdir, field);		\
+				_RB_FLIP_RDIFF(sibling, elmdir, field);			\
 				_RB_FLIP_RDIFF(parent, elmdir, field);			\
 				extend = 1;						\
 			}								\
 			_RB_FLIP_RDIFF(parent, sibdir, field);				\
 			elm = sibling;							\
 		}									\
-		_RB_ROTATE(parent, elm, elmdir, field);				\
+		_RB_ROTATE(parent, elm, elmdir, field);					\
 		_RB_SET_PARENT(elm, gpar, field);					\
-		_RB_SWAP_CHILD_OR_ROOT(head, gpar, parent, elm, field);		\
+		_RB_SWAP_CHILD_OR_ROOT(head, gpar, parent, elm, field);			\
 		if (extend) {								\
 			_RB_SET_RDIFF(elm, elmdir, 1, field);				\
 		}									\
@@ -686,7 +685,7 @@ name##_RB_REMOVE_START(struct name *head, struct type *elm)				\
 	rmin = RB_RIGHT(elm, field);							\
 	if (rmin == NULL || _RB_PTR(child) == NULL) {					\
 		rmin = child = (rmin == NULL ? _RB_PTR(child) : rmin);			\
-		parent = opar;								\
+		_RB_STACK_POP(head, parent);						\
 	}										\
 	else {										\
 		_RB_STACK_PUSH(head, elm);						\
@@ -713,7 +712,7 @@ name##_RB_REMOVE_START(struct name *head, struct type *elm)				\
 		}									\
 		_RB_SET_RDIFF(rmin, _RB_RDIR, _RB_GET_RDIFF(elm, _RB_RDIR, field), field);	\
 		_RB_SET_PARENT(rmin, opar, field);					\
-		child = _RB_PTR(child);						\
+		child = _RB_PTR(child);							\
 	}										\
 	if (opar == NULL) {								\
 		RB_ROOT(head) = rmin;							\
@@ -752,11 +751,11 @@ name##_RB_REMOVE(struct name *head, struct type *elm)					\
 	_RB_GENERATE_INTERNAL(name, type, field, cmp, __attribute__((__unused__)) static)
 
 #define _RB_GENERATE_INTERNAL(name, type, field, cmp, attr)				\
-	_RB_GENERATE_RANK(name, type, field, cmp, attr)				\
+	_RB_GENERATE_RANK(name, type, field, cmp, attr)					\
 	_RB_GENERATE_INSERT(name, type, field, cmp, attr)				\
 	_RB_GENERATE_REMOVE(name, type, field, cmp, attr)				\
 	_RB_GENERATE_CACHE(name, type, field, cmp, attr)				\
-	_RB_GENERATE_FIND(name, type, field, cmp, attr)				\
+	_RB_GENERATE_FIND(name, type, field, cmp, attr)					\
 	_RB_GENERATE_MINMAX(name, type, field, cmp, attr)
 
 #define RB_PROTOTYPE(name, type, field, cmp)						\
@@ -769,15 +768,16 @@ name##_RB_REMOVE(struct name *head, struct type *elm)					\
 int			 name##_RB_RANK(const struct type *);			\
 attr struct type	*name##_RB_INSERT(struct name *, struct type *);	\
 attr struct type	*name##_RB_REMOVE(struct name *, struct type *);	\
-attr struct type	*name##_RB_CACHE(struct name *, struct type *);	\
+attr struct type	*name##_RB_CACHE(struct name *, struct type *);		\
 attr struct type	*name##_RB_FIND(struct name *, struct type *);		\
-attr struct type	*name##_RB_NFIND(struct name *, struct type *);	\
-attr struct type	*name##_RB_PFIND(struct name *, struct type *);	\
+attr struct type	*name##_RB_NFIND(struct name *, struct type *);		\
+attr struct type	*name##_RB_PFIND(struct name *, struct type *);		\
 attr struct type	*name##_RB_MINMAX(struct name *, int);
 
 #define RB_RANK(name, head)		name##_RB_RANK(head)
 #define RB_INSERT(name, head, elm)	name##_RB_INSERT(head, elm)
 #define RB_REMOVE(name, head, elm)	name##_RB_REMOVE(head, elm)
+#define RB_CACHE(name, head, elm)	name##_RB_CACHE(head, elm)
 #define RB_FIND(name, head, elm)	name##_RB_FIND(head, elm)
 #define RB_NFIND(name, head, elm)	name##_RB_NFIND(head, elm)
 #define RB_PFIND(name, head, elm)	name##_RB_PFIND(head, elm)
