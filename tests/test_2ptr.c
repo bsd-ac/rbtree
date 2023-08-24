@@ -6,9 +6,9 @@
 #include <stdio.h>
 #include <time.h>
 
-#define RB2_SMALL
-//#define RB2_DIAGNOSTIC
-#include "rbtree.h"
+#define RB_SMALL
+//#define RB_DIAGNOSTIC
+#include "tree.h"
 
 #define TDEBUGF(fmt, ...)	fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 
@@ -31,7 +31,7 @@
 	} while (0)
 #endif
 
-int ITER=150000;
+int ITER=15000000;
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 /* declarations */
@@ -45,21 +45,21 @@ static void mix_operations(int *, int, struct node *, int, int, int, int);
 
 /* definitions */
 struct node {
-	RB2_ENTRY(node) node_link;
+	RB_ENTRY(node) node_link;
 	int             key;
 	size_t          height;
 	size_t          size;
 };
 
-RB2_HEAD(tree, node);
+RB_HEAD(tree, node);
 struct tree root;
 
-#undef RB2_AUGMENT
-#define RB2_AUGMENT(elm) tree_augment(elm)
+//#undef RB_AUGMENT
+//#define RB_AUGMENT(elm) tree_augment(elm)
 
-RB2_PROTOTYPE(tree, node, node_link, compare)
+RB_PROTOTYPE(tree, node, node_link, compare)
 
-RB2_GENERATE(tree, node, node_link, compare)
+RB_GENERATE(tree, node, node_link, compare)
 
 int
 main()
@@ -74,7 +74,7 @@ main()
 
         // for determinism
         SEED_RANDOM(423);
-	
+
         TDEBUGF("generating a 'random' permutation");
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
         perm[0] = 0;
@@ -107,7 +107,7 @@ main()
 	timespecsub(&end, &start, &diff);
         TDEBUGF("done generating a 'random' permutation in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 
-	RB2_INIT(&root);
+	RB_INIT(&root);
 
         TDEBUGF("starting random insertions");
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
@@ -117,18 +117,18 @@ main()
         TDEBUGF("done random insertions in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 
 #ifdef DIAGNOSTIC
-	print_tree(RB2_ROOT(&root));
+	print_tree(RB_ROOT(&root));
 #endif
 
 #ifdef DOAUGMENT
-	ins = RB2_ROOT(&root);
+	ins = RB_ROOT(&root);
 	if (ins->size != ITER + 1)
 		errx(1, "size does not match");
 #endif
 /*
 	TDEBUGF("getting min");
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
-	ins = RB2_MIN(tree, &root);
+	ins = RB_MIN(tree, &root);
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
         TDEBUGF("done getting min in: %lld.%09ld s", diff.tv_sec, diff.tv_nsec);
@@ -137,49 +137,49 @@ main()
 
 	TDEBUGF("getting max");
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
-	ins = RB2_MAX(tree, &root);
+	ins = RB_MAX(tree, &root);
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
         TDEBUGF("done getting max in: %lld.%09ld s", diff.tv_sec, diff.tv_nsec);
 	if (ins->key != ITER + 5)
 		errx(1, "max does not match");
 */
-	ins = RB2_ROOT(&root);
-	if (RB2_REMOVE(tree, &root, ins) != ins)
-		errx(1, "RB2_REMOVE failed");
+	ins = RB_ROOT(&root);
+	if (RB_REMOVE(tree, &root, ins) != ins)
+		errx(1, "RB_REMOVE failed");
         //print_tree(&root);
 /*
 #ifdef DOAUGMENT
-	if ((RB2_ROOT(&root))->size != ITER)
-	  errx(1, "RB2_REMOVE initial size error: %zu", (RB2_ROOT(&root))->size);
+	if ((RB_ROOT(&root))->size != ITER)
+	  errx(1, "RB_REMOVE initial size error: %zu", (RB_ROOT(&root))->size);
 #endif
 */
 	TDEBUGF("doing root removals");
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 	for (i = 0; i < ITER; i++) {
-		tmp = RB2_ROOT(&root);
+		tmp = RB_ROOT(&root);
 		if (tmp == NULL)
-			errx(1, "RB2_ROOT error");
+			errx(1, "RB_ROOT error");
                 //TDEBUGF("removal number %d = %d", i, tmp->key);
-		if (RB2_REMOVE(tree, &root, tmp) != tmp)
-			errx(1, "RB2_REMOVE error");
+		if (RB_REMOVE(tree, &root, tmp) != tmp)
+			errx(1, "RB_REMOVE error");
                 //print_tree(&root);
-                //int rank = RB2_RANK(tree, RB2_ROOT(&root));
+                //int rank = RB_RANK(tree, RB_ROOT(&root));
                 //if (rank == -2)
                 //        errx(1, "rank error");
 
 #ifdef DOAUGMENT
-		if (!(RB2_EMPTY(&root)) && (RB2_ROOT(&root))->size != ITER - 1 - i)
-			errx(1, "RB2_REMOVE size error");
+		if (!(RB_EMPTY(&root)) && (RB_ROOT(&root))->size != ITER - 1 - i)
+			errx(1, "RB_REMOVE size error");
 #endif
 	}
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
         TDEBUGF("done root removals in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 /*
-	RB2_FOREACH_SAFE(ins, tree, &root, tmp) {
-		if(RB2_REMOVE(tree, &root, ins) != ins)
-			errx(1, "RB2_REMOVE error");
+	RB_FOREACH_SAFE(ins, tree, &root, tmp) {
+		if(RB_REMOVE(tree, &root, ins) != ins)
+			errx(1, "RB_REMOVE error");
 	}
 
         TDEBUGF("starting sequential insertions");
@@ -191,9 +191,9 @@ main()
 
 	TDEBUGF("doing sequential removals");
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
-	RB2_FOREACH_SAFE(ins, tree, &root, tmp) {
-		if(RB2_REMOVE(tree, &root, ins) != ins)
-			errx(1, "RB2_REMOVE error");
+	RB_FOREACH_SAFE(ins, tree, &root, tmp) {
+		if(RB_REMOVE(tree, &root, ins) != ins)
+			errx(1, "RB_REMOVE error");
 	}
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
@@ -211,10 +211,10 @@ main()
 	tmp = malloc(sizeof(struct node));
 	for(i = 0; i <= ITER; i++) {
 		tmp->key = i;
-		ins = RB2_FIND(tree, &root, tmp);
+		ins = RB_FIND(tree, &root, tmp);
 		if (ins != NULL)
-			if (RB2_REMOVE(tree, &root, ins) != ins)
-				errx(1, "RB2_REMOVE failed: %d", i);
+			if (RB_REMOVE(tree, &root, ins) != ins)
+				errx(1, "RB_REMOVE failed: %d", i);
 	}
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
@@ -222,9 +222,9 @@ main()
 
 	TDEBUGF("doing sequential removals");
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
-	RB2_FOREACH_SAFE(ins, tree, &root, tmp) {
-		if(RB2_REMOVE(tree, &root, ins) != ins)
-			errx(1, "RB2_REMOVE error");
+	RB_FOREACH_SAFE(ins, tree, &root, tmp) {
+		if(RB_REMOVE(tree, &root, ins) != ins)
+			errx(1, "RB_REMOVE error");
 	}
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
@@ -239,9 +239,9 @@ main()
 
 	TDEBUGF("doing sequential removals");
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
-	RB2_FOREACH_SAFE(ins, tree, &root, tmp) {
-		if(RB2_REMOVE(tree, &root, ins) != ins)
-			errx(1, "RB2_REMOVE error");
+	RB_FOREACH_SAFE(ins, tree, &root, tmp) {
+		if(RB_REMOVE(tree, &root, ins) != ins)
+			errx(1, "RB_REMOVE error");
 	}
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
@@ -256,9 +256,9 @@ main()
 
 	TDEBUGF("doing sequential removals");
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
-	RB2_FOREACH_SAFE(ins, tree, &root, tmp) {
-		if(RB2_REMOVE(tree, &root, ins) != ins)
-			errx(1, "RB2_REMOVE error");
+	RB_FOREACH_SAFE(ins, tree, &root, tmp) {
+		if(RB_REMOVE(tree, &root, ins) != ins)
+			errx(1, "RB_REMOVE error");
 	}
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
@@ -273,9 +273,9 @@ main()
 
 	TDEBUGF("doing sequential removals");
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
-	RB2_FOREACH_SAFE(ins, tree, &root, tmp) {
-		if(RB2_REMOVE(tree, &root, ins) != ins)
-			errx(1, "RB2_REMOVE error");
+	RB_FOREACH_SAFE(ins, tree, &root, tmp) {
+		if(RB_REMOVE(tree, &root, ins) != ins)
+			errx(1, "RB_REMOVE error");
 	}
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
@@ -290,9 +290,9 @@ main()
 
 	TDEBUGF("doing sequential removals");
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
-	RB2_FOREACH_SAFE(ins, tree, &root, tmp) {
-		if(RB2_REMOVE(tree, &root, ins) != ins)
-			errx(1, "RB2_REMOVE error");
+	RB_FOREACH_SAFE(ins, tree, &root, tmp) {
+		if(RB_REMOVE(tree, &root, ins) != ins)
+			errx(1, "RB_REMOVE error");
 	}
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
@@ -307,9 +307,9 @@ main()
 
 	TDEBUGF("doing sequential removals");
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
-	RB2_FOREACH_SAFE(ins, tree, &root, tmp) {
-		if(RB2_REMOVE(tree, &root, ins) != ins)
-			errx(1, "RB2_REMOVE error");
+	RB_FOREACH_SAFE(ins, tree, &root, tmp) {
+		if(RB_REMOVE(tree, &root, ins) != ins)
+			errx(1, "RB_REMOVE error");
 	}
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
@@ -332,30 +332,30 @@ compare(const struct node *a, const struct node *b)
 static void
 print_helper(const struct node *n, int indent)
 {
-	if (RB2_RIGHT(n, node_link))
-  		print_helper(RB2_RIGHT(n, node_link), indent + 4);
-	TDEBUGF("%*s key=%d :: size=%zu :: rank=%d :: rdiff %lu:%lu", indent, "", n->key, n->size, RB2_RANK(tree, n), _RB2_GET_RDIFF(n, 0, node_link), _RB2_GET_RDIFF(n, 1, node_link));
-	if (RB2_LEFT(n, node_link))
-  		print_helper(RB2_LEFT(n, node_link), indent + 4);
+	if (RB_RIGHT(n, node_link))
+  		print_helper(RB_RIGHT(n, node_link), indent + 4);
+	TDEBUGF("%*s key=%d :: size=%zu :: rank=%d :: rdiff %lu:%lu", indent, "", n->key, n->size, 0, 0, 0);
+	if (RB_LEFT(n, node_link))
+  		print_helper(RB_LEFT(n, node_link), indent + 4);
 }
 
 static void
 print_tree(const struct tree *t)
 {
-	if (RB2_ROOT(t)) print_helper(RB2_ROOT(t), 0);
+	if (RB_ROOT(t)) print_helper(RB_ROOT(t), 0);
 }
 
-static int 
+static int
 tree_augment(struct node *elm)
 {
 	size_t newsize = 1, newheight = 0;
-	if ((RB2_LEFT(elm, node_link))) {
-		newsize += (RB2_LEFT(elm, node_link))->size;
-		newheight = MAX((RB2_LEFT(elm, node_link))->height, newheight);
+	if ((RB_LEFT(elm, node_link))) {
+		newsize += (RB_LEFT(elm, node_link))->size;
+		newheight = MAX((RB_LEFT(elm, node_link))->height, newheight);
 	}
-	if ((RB2_RIGHT(elm, node_link))) {
-		newsize += (RB2_RIGHT(elm, node_link))->size;
-		newheight = MAX((RB2_RIGHT(elm, node_link))->height, newheight);
+	if ((RB_RIGHT(elm, node_link))) {
+		newsize += (RB_RIGHT(elm, node_link))->size;
+		newheight = MAX((RB_RIGHT(elm, node_link))->height, newheight);
 	}
 	newheight += 1;
 	if (elm->size != newsize || elm->height != newheight) {
@@ -383,10 +383,10 @@ mix_operations(int *perm, int psize, struct node *nodes, int nsize, int insertio
 		tmp->height = 1;
 		tmp->key = perm[i];
                 //TDEBUGF("inserting %d", tmp->key);
-		if (RB2_INSERT(tree, &root, tmp) != NULL)
-			errx(1, "RB2_INSERT failed");
+		if (RB_INSERT(tree, &root, tmp) != NULL)
+			errx(1, "RB_INSERT failed");
                 //print_tree(&root);
-                //int rank = RB2_RANK(tree, RB2_ROOT(&root));
+                //int rank = RB_RANK(tree, RB_ROOT(&root));
                 //TDEBUGF("rank: %d", rank);
                 //if (rank == -2)
                 //        errx(1, "rank error");
@@ -396,25 +396,26 @@ mix_operations(int *perm, int psize, struct node *nodes, int nsize, int insertio
 	tmp->key = ITER + 5;
 	tmp->size = 1;
 	tmp->height = 1;
-	RB2_INSERT(tree, &root, tmp);
+	RB_INSERT(tree, &root, tmp);
 	if (do_reads) {
 		for (i = 0; i < insertions; i++) {
 			it.key = perm[i];
-			ins = RB2_FIND(tree, &root, &it);
+			ins = RB_FIND(tree, &root, &it);
 			if ((ins == NULL) || ins->key != it.key)
-				errx(1, "RB2_FIND failed");
+				errx(1, "RB_FIND failed");
 		}
 		for (i = insertions; i < insertions + reads; i++) {
 			it.key = perm[i];
-			ins = RB2_NFIND(tree, &root, &it);
+			ins = RB_NFIND(tree, &root, &it);
 			if (ins->key < it.key)
-				errx(1, "RB2_NFIND failed");
+				errx(1, "RB_NFIND failed");
 		}
+                /*
 		for (i = insertions; i < insertions + reads; i++) {
 			it.key = perm[i];
-			ins = RB2_PFIND(tree, &root, &it);
+			ins = RB_PFIND(tree, &root, &it);
 			if (ins->key > it.key)
-				errx(1, "RB2_PFIND failed");
-		}
+				errx(1, "RB_PFIND failed");
+		}*/
 	}
 }

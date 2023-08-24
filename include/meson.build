@@ -1,5 +1,5 @@
 headers = [
-        'rbtree.h'
+        'tree.h'
 ]
 
 install_headers(headers)
