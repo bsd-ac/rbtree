@@ -201,11 +201,6 @@ _RB_BITS(_RB_GET_CHILD(elm, dir, field)) = (_RB_BITS(_RB_GET_CHILD(elm, dir, fie
 #define RB_RIGHT(elm, field)				_RB_PTR(_RB_GET_CHILD(elm, _RB_RDIR, field))
 
 /*
- * @param elm: the node to be rotated
- * @param celm: child element
- * @param dir: the direction of rotation
- * 
- * 
  *      elm            celm
  *      / \            / \
  *     c1  celm       elm gc2
@@ -413,10 +408,10 @@ name##_RB_INSERT(struct name *head, struct type *elm)					\
 }											\
 
 #ifdef RB_SMALL
-#define _RB_GENERATE_CACHE(name, type, field, cmp, attr)				\
+#define _RB_GENERATE_FINDC(name, type, field, cmp, attr)				\
 											\
 attr struct type *									\
-name##_RB_CACHE(struct name *head, struct type *elm)					\
+name##_RB_FINDC(struct name *head, struct type *elm)					\
 {											\
 	struct type *tmp = RB_ROOT(head);						\
 	__typeof(cmp(NULL, NULL)) comp;							\
@@ -432,9 +427,71 @@ name##_RB_CACHE(struct name *head, struct type *elm)					\
 			return (tmp);							\
 	}										\
 	return (NULL);									\
+}											\
+											\
+attr struct type *									\
+name##_RB_NFINDC(struct name *head, struct type *elm)					\
+{											\
+	struct type *tmp = RB_ROOT(head);						\
+	struct type *res = NULL;							\
+	__typeof(cmp(NULL, NULL)) comp;							\
+	_RB_STACK_CLEAR(head);								\
+	while (tmp) {									\
+		_RB_STACK_PUSH(head, tmp);						\
+		comp = cmp(elm, tmp);							\
+		if (comp < 0) {								\
+			res = tmp;							\
+			tmp = RB_LEFT(tmp, field);					\
+		}									\
+		else if (comp > 0)							\
+			tmp = RB_RIGHT(tmp, field);					\
+		else									\
+			return (tmp);							\
+	}										\
+	return (res);						                	\
+}											\
+											\
+attr struct type *									\
+name##_RB_PFINDC(struct name *head, struct type *elm)					\
+{											\
+	struct type *tmp = RB_ROOT(head);						\
+	struct type *res = NULL;							\
+	__typeof(cmp(NULL, NULL)) comp;							\
+	_RB_STACK_CLEAR(head);								\
+	while (tmp) {									\
+		_RB_STACK_PUSH(head, tmp);						\
+		comp = cmp(elm, tmp);							\
+		if (comp > 0) {								\
+			res = tmp;							\
+			tmp = RB_RIGHT(tmp, field);					\
+		}									\
+		else if (comp < 0)							\
+			tmp = RB_LEFT(tmp, field);					\
+		else									\
+			return (tmp);							\
+	}										\
+	return (res);									\
 }
 #else
-#define _RB_GENERATE_CACHE(name, type, field, cmp, attr)
+#define _RB_GENERATE_FINDC(name, type, field, cmp, attr)				\
+											\
+attr struct type *									\
+name##_RB_FINDC(struct name *head, struct type *elm)					\
+{											\
+	return (elm);									\
+}											\
+											\
+attr struct type *									\
+name##_RB_NFINDC(struct name *head, struct type *elm)					\
+{											\
+	return (elm);									\
+}											\
+											\
+attr struct type *									\
+name##_RB_PFINDC(struct name *head, struct type *elm)					\
+{											\
+	return (elm);									\
+}
 #endif
 
 #define _RB_GENERATE_FIND(name, type, field, cmp, attr)		               		\
@@ -442,7 +499,7 @@ name##_RB_CACHE(struct name *head, struct type *elm)					\
 attr struct type *									\
 name##_RB_FIND(struct name *head, struct type *elm)					\
 {											\
-	struct type *res, *tmp = RB_ROOT(head);						\
+	struct type *tmp = RB_ROOT(head);						\
 	__typeof(cmp(NULL, NULL)) comp;							\
 	while (tmp) {									\
 		comp = cmp(elm, tmp);							\
@@ -586,7 +643,6 @@ name##_RB_MINMAX(struct name *head, int dir)						\
  *                c1  c2
  *
  */
-
 #define _RB_GENERATE_REMOVE(name, type, field, cmp, attr)				\
 											\
 attr struct type *									\
@@ -734,15 +790,38 @@ name##_RB_REMOVE_START(struct name *head, struct type *elm)				\
 attr struct type *									\
 name##_RB_REMOVE(struct name *head, struct type *elm)					\
 {											\
-	struct type *telm;								\
+	struct type *telm = elm;							\
 											\
-	telm = name##_RB_CACHE(head, elm);						\
+	telm = name##_RB_FINDC(head, elm);						\
 	if (telm == NULL)								\
 		return (NULL);								\
 	_RB_STACK_POP(head, telm);							\
 	_RB_ASSERT((cmp(telm, elm)) == 0);						\
 	return (name##_RB_REMOVE_START(head, telm));					\
 }
+
+#ifdef RB_SMALL
+#define _RB_GENERATE_REMOVEC(name, type, field, cmp, attr)				\
+											\
+attr struct type *									\
+name##_RB_REMOVEC(struct name *head, struct type *elm)					\
+{											\
+	struct type *telm = elm;							\
+											\
+	_RB_STACK_POP(head, telm);							\
+	_RB_ASSERT((cmp(telm, elm)) == 0);						\
+	return (name##_RB_REMOVE_START(head, telm));					\
+}
+#else
+#define _RB_GENERATE_REMOVEC(name, type, field, cmp, attr)				\
+											\
+attr struct type *									\
+name##_RB_REMOVEC(struct name *head, struct type *elm)					\
+{											\
+	return (NULL);									\
+}
+#endif
+
 
 #define RB_GENERATE(name, type, field, cmp)						\
 	_RB_GENERATE_INTERNAL(name, type, field, cmp,)
@@ -754,9 +833,11 @@ name##_RB_REMOVE(struct name *head, struct type *elm)					\
 	_RB_GENERATE_RANK(name, type, field, cmp, attr)					\
 	_RB_GENERATE_INSERT(name, type, field, cmp, attr)				\
 	_RB_GENERATE_REMOVE(name, type, field, cmp, attr)				\
-	_RB_GENERATE_CACHE(name, type, field, cmp, attr)				\
+	_RB_GENERATE_REMOVEC(name, type, field, cmp, attr)				\
 	_RB_GENERATE_FIND(name, type, field, cmp, attr)					\
+	_RB_GENERATE_FINDC(name, type, field, cmp, attr)				\
 	_RB_GENERATE_MINMAX(name, type, field, cmp, attr)
+
 
 #define RB_PROTOTYPE(name, type, field, cmp)						\
 	_RB_PROTOTYPE_INTERNAL(name, type, field, cmp,)
@@ -765,24 +846,45 @@ name##_RB_REMOVE(struct name *head, struct type *elm)					\
 	_RB_PROTOTYPE_INTERNAL(name, type, field, cmp, __attribute__((__unused__)) static)
 
 #define _RB_PROTOTYPE_INTERNAL(name, type, field, cmp, attr)			\
+	_RB_PROTOTYPE_INTERNAL_COMMON(name, type, field, cmp, attr)		\
+	_RB_PROTOTYPE_INTERNAL_RBSMALL(name, type, field, cmp, attr)
+
+#define _RB_PROTOTYPE_INTERNAL_COMMON(name, type, field, cmp, attr)		\
 int			 name##_RB_RANK(const struct type *);			\
 attr struct type	*name##_RB_INSERT(struct name *, struct type *);	\
 attr struct type	*name##_RB_REMOVE(struct name *, struct type *);	\
-attr struct type	*name##_RB_CACHE(struct name *, struct type *);		\
 attr struct type	*name##_RB_FIND(struct name *, struct type *);		\
 attr struct type	*name##_RB_NFIND(struct name *, struct type *);		\
 attr struct type	*name##_RB_PFIND(struct name *, struct type *);		\
-attr struct type	*name##_RB_MINMAX(struct name *, int);
+attr struct type	*name##_RB_MINMAX(struct name *, int);			\
+
+
+#ifdef RB_SMALL
+#define _RB_PROTOTYPE_INTERNAL_RBSMALL(name, type, field, cmp, attr)		\
+attr struct type	*name##_RB_FINDC(struct name *, struct type *);		\
+attr struct type	*name##_RB_NFINDC(struct name *, struct type *);	\
+attr struct type	*name##_RB_PFINDC(struct name *, struct type *);	\
+attr struct type	*name##_RB_REMOVEC(struct name *, struct type *);
+#else
+#define _RB_PROTOTYPE_INTERNAL_RBSMALL(name, type, field, cmp, attr)
+#endif
+
 
 #define RB_RANK(name, head)		name##_RB_RANK(head)
 #define RB_INSERT(name, head, elm)	name##_RB_INSERT(head, elm)
 #define RB_REMOVE(name, head, elm)	name##_RB_REMOVE(head, elm)
-#define RB_CACHE(name, head, elm)	name##_RB_CACHE(head, elm)
 #define RB_FIND(name, head, elm)	name##_RB_FIND(head, elm)
 #define RB_NFIND(name, head, elm)	name##_RB_NFIND(head, elm)
 #define RB_PFIND(name, head, elm)	name##_RB_PFIND(head, elm)
 #define RB_MIN(name, head)		name##_RB_MINMAX(head, _RB_LDIR)
 #define RB_MAX(name, head)		name##_RB_MINMAX(head, _RB_RDIR)
 
+
+#ifdef RB_SMALL
+#define RB_FINDC(name, head, elm)	name##_RB_FINDC(head, elm)
+#define RB_NFINDC(name, head, elm)	name##_RB_NFINDC(head, elm)
+#define RB_PFINDC(name, head, elm)	name##_RB_PFINDC(head, elm)
+#define RB_REMOVEC(name, head, elm)	name##_RB_REMOVEC(head, elm)
+#endif
 
 #endif /* _SYS_TREE_H_ */
