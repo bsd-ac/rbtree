@@ -736,6 +736,7 @@ name##_RB_REMOVE_START(struct name *head, struct type *elm)				\
 	__uintptr_t elmdir;								\
 	size_t sz;									\
 											\
+	parent = NULL;									\
 	opar = NULL;									\
 	_RB_STACK_TOP(head, opar);							\
 	_RB_GET_PARENT(child, opar, field);						\
@@ -745,7 +746,8 @@ name##_RB_REMOVE_START(struct name *head, struct type *elm)				\
 	rmin = RB_RIGHT(elm, field);							\
 	if (rmin == NULL || _RB_PTR(child) == NULL) {					\
 		rmin = child = (rmin == NULL ? _RB_PTR(child) : rmin);			\
-		_RB_STACK_POP(head, parent);						\
+		parent = opar;								\
+		_RB_STACK_DROP(head);							\
 	}										\
 	else {										\
 		_RB_STACK_PUSH(head, elm);						\
