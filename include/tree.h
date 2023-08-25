@@ -183,6 +183,9 @@ _RB_GET_CHILD(elm, dir, field) = (celm);			\
 #define _RB_REPLACE_CHILD(elm, dir, oelm, nelm, field)	do {	\
 _RB_BITS(_RB_GET_CHILD(elm, dir, field)) ^= (__uintptr_t)_RB_BITS(oelm) ^ _RB_BITS(nelm);	\
 } while (0)
+#define _RB_REPLACE_NULL_CHILD(elm, dir, nelm, field)	do {	\
+_RB_BITS(_RB_GET_CHILD(elm, dir, field)) ^= _RB_BITS(nelm);	\
+} while (0)
 #define _RB_SWAP_CHILD_OR_ROOT(head, elm, oelm, nelm, field)	do {	\
 if (elm == NULL)							\
 	RB_ROOT(head) = nelm;						\
@@ -351,7 +354,7 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent, struct type *el
 		} else {								\
 			elmdir = RB_LEFT(gpar, field) == parent ? _RB_LDIR : _RB_RDIR;	\
 			sibdir = _RB_GET_RDIFF(gpar, elmdir, field);			\
-			_RB_SET_CHILD(gpar, elmdir, _RB_PTR(child), field);		\
+			_RB_SET_CHILD(gpar, elmdir, child, field);			\
 			_RB_SET_RDIFF(gpar, elmdir, sibdir, field);			\
 		}									\
 		return (child);								\
@@ -368,10 +371,12 @@ name##_RB_INSERT_FINISH(struct name *head, struct type *parent,				\
 	__uintptr_t rdiff = 0;								\
 											\
 	_RB_SET_PARENT(elm, parent, field);						\
-	rdiff = _RB_GET_RDIFF(parent, insdir, field);					\
-	_RB_SET_CHILD(parent, insdir, elm, field);					\
-	_RB_SET_RDIFF(parent, insdir, rdiff, field);					\
-	name##_RB_INSERT_BALANCE(head, parent, elm);					\
+	if (_RB_GET_CHILD(parent, insdir, field))					\
+		_RB_SET_CHILD(parent, insdir, elm, field);				\
+	else {										\
+		_RB_REPLACE_NULL_CHILD(parent, insdir, elm, field);			\
+		name##_RB_INSERT_BALANCE(head, parent, elm);				\
+	}										\
 	return (NULL);									\
 }											\
 											\
