@@ -118,6 +118,10 @@ struct name {						\
 (head)->stack[(head)->top++] = elm;		\
 } while (0)
 
+#define _RB_STACK_DROP(head)		do {	\
+(head)->top -= 1;				\
+} while (0)
+
 #define _RB_STACK_POP(head, oelm)	do {	\
 if ((head)->top > 0)				\
 	oelm = (head)->stack[--(head)->top];	\
@@ -765,6 +769,7 @@ name##_RB_REMOVE_START(struct name *head, struct type *elm)				\
 			_RB_STACK_SET(head, sz - 1, rmin);				\
 		} else {								\
 			_RB_STACK_SET(head, sz - 1, NULL);				\
+			_RB_STACK_DROP(head);						\
 		}									\
 		_RB_SET_RDIFF(rmin, _RB_RDIR, _RB_GET_RDIFF(elm, _RB_RDIR, field), field);	\
 		_RB_SET_PARENT(rmin, opar, field);					\

@@ -9,6 +9,7 @@
 #define RB_SMALL
 #define RB_TEST_RANK
 #define RB_TEST_DIAGNOSTIC
+#define RB_DIAGNOSTIC
 #include "tree.h"
 
 #define TDEBUGF(fmt, ...)	fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
@@ -32,7 +33,7 @@
 	} while (0)
 #endif
 
-int ITER=15;
+int ITER=150000;
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 /* declarations */
@@ -52,7 +53,7 @@ static void print_helper(const struct node *, int);
 static void print_tree(const struct tree *);
 #else
 #define print_helper(x, y)      do {} while (0)
-#define print_tree(x)           do {} while (0)
+#define print_tree(x)	   do {} while (0)
 #endif
 
 /* definitions */
@@ -167,11 +168,11 @@ main()
 			errx(1, "RB_ROOT error");
 		if (RB_REMOVE(tree, &root, tmp) != tmp)
 			errx(1, "RB_REMOVE error");
-                if (i % 10000 == 0) {
-		        rank = RB_RANK(tree, RB_ROOT(&root));
-        		if (rank == -2)
-		        	errx(1, "rank error");
-                }
+		if (i % 10000 == 0) {
+			rank = RB_RANK(tree, RB_ROOT(&root));
+			if (rank == -2)
+				errx(1, "rank error");
+		}
 
 #ifdef DOAUGMENT
 		if (!(RB_EMPTY(&root)) && (RB_ROOT(&root))->size != ITER - 1 - i)
@@ -198,11 +199,11 @@ main()
 			errx(1, "RB_ROOT error");
 		if (RB_REMOVE(tree, &root, tmp) != tmp)
 			errx(1, "RB_REMOVE error");
-                if (i % 10000 == 0) {
-		        rank = RB_RANK(tree, RB_ROOT(&root));
-        		if (rank == -2)
-		        	errx(1, "rank error");
-                }
+		if (i % 10000 == 0) {
+			rank = RB_RANK(tree, RB_ROOT(&root));
+			if (rank == -2)
+				errx(1, "rank error");
+		}
 	}
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
@@ -225,11 +226,11 @@ main()
 			errx(1, "RB_FIND failed");
 		if (RB_REMOVE(tree, &root, ins) == NULL)
 			errx(1, "RB_REMOVE failed: %d", i);
-                if (i % 10000 == 0) {
-		        rank = RB_RANK(tree, RB_ROOT(&root));
-        		if (rank == -2)
-		        	errx(1, "rank error");
-                }
+		if (i % 10000 == 0) {
+			rank = RB_RANK(tree, RB_ROOT(&root));
+			if (rank == -2)
+				errx(1, "rank error");
+		}
 	}
 	free(tmp);
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
@@ -237,8 +238,8 @@ main()
 	TDEBUGF("done removals in: %lld.%09ld s", diff.tv_sec, diff.tv_nsec);
 
 	ins = RB_ROOT(&root);
-        if (ins == NULL)
-                errx(1, "RB_ROOT error");
+	if (ins == NULL)
+		errx(1, "RB_ROOT error");
 	if (RB_REMOVE(tree, &root, ins) != ins)
 		errx(1, "RB_REMOVE failed");
 
@@ -253,19 +254,18 @@ main()
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 	tmp = malloc(sizeof(struct node));
 	for(i = 0; i < ITER; i++) {
-                TDEBUGF("----------------------");
-                TDEBUGF("removal %d: %d", i, perm[i]);
-                print_tree(&root);
 		tmp->key = perm[i];
 		ins = RB_FIND(tree, &root, tmp);
 		if (ins == NULL) {
 			errx(1, "RB_FIND %d failed: %d", i, perm[i]);
-                }
+		}
 		if (RB_REMOVE(tree, &root, ins) == NULL)
 			errx(1, "RB_REMOVE failed: %d", i);
-                rank = RB_RANK(tree, RB_ROOT(&root));
-                if (rank == -2)
-                        errx(1, "rank error");
+		if (i % 10000 == 0) {
+			rank = RB_RANK(tree, RB_ROOT(&root));
+			if (rank == -2)
+				errx(1, "rank error");
+		}
 	}
 	free(tmp);
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
@@ -273,8 +273,8 @@ main()
 	TDEBUGF("done removals in: %lld.%09ld s", diff.tv_sec, diff.tv_nsec);
 
 	ins = RB_ROOT(&root);
-        if (ins == NULL)
-                errx(1, "RB_ROOT error");
+	if (ins == NULL)
+		errx(1, "RB_ROOT error");
 	if (RB_REMOVE(tree, &root, ins) != ins)
 		errx(1, "RB_REMOVE failed");
 
@@ -295,11 +295,11 @@ main()
 			errx(1, "RB_NFIND failed");
 		if (RB_REMOVE(tree, &root, ins) == NULL)
 			errx(1, "RB_REMOVE failed: %d", i);
-                if (i % 10000 == 0) {
-		        rank = RB_RANK(tree, RB_ROOT(&root));
-        		if (rank == -2)
-		        	errx(1, "rank error");
-                }
+		if (i % 10000 == 0) {
+			rank = RB_RANK(tree, RB_ROOT(&root));
+			if (rank == -2)
+				errx(1, "rank error");
+		}
 	}
 	free(tmp);
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
@@ -323,11 +323,11 @@ main()
 			errx(1, "RB_PFIND failed");
 		if (RB_REMOVE(tree, &root, ins) == NULL)
 			errx(1, "RB_REMOVE failed: %d", i);
-                if (i % 10000 == 0) {
-		        rank = RB_RANK(tree, RB_ROOT(&root));
-        		if (rank == -2)
-		        	errx(1, "rank error");
-                }
+		if (i % 10000 == 0) {
+			rank = RB_RANK(tree, RB_ROOT(&root));
+			if (rank == -2)
+				errx(1, "rank error");
+		}
 	}
 	free(tmp);
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
@@ -352,11 +352,11 @@ main()
 			errx(1, "RB_FINDC failed");
 		if (RB_REMOVEC(tree, &root, ins) == NULL)
 			errx(1, "RB_REMOVEC failed: %d", i);
-                if (i % 10000 == 0) {
-		        rank = RB_RANK(tree, RB_ROOT(&root));
-        		if (rank == -2)
-		        	errx(1, "rank error");
-                }
+		if (i % 10000 == 0) {
+			rank = RB_RANK(tree, RB_ROOT(&root));
+			if (rank == -2)
+				errx(1, "rank error");
+		}
 	}
 	free(tmp);
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
@@ -364,8 +364,8 @@ main()
 	TDEBUGF("done removals in: %lld.%09ld s", diff.tv_sec, diff.tv_nsec);
 
 	ins = RB_ROOT(&root);
-        if (ins == NULL)
-                errx(1, "RB_ROOT error");
+	if (ins == NULL)
+		errx(1, "RB_ROOT error");
 	if (RB_REMOVE(tree, &root, ins) != ins)
 		errx(1, "RB_REMOVE failed");
 
@@ -386,11 +386,11 @@ main()
 			errx(1, "RB_NFINDC failed");
 		if (RB_REMOVEC(tree, &root, ins) == NULL)
 			errx(1, "RB_REMOVEC failed: %d", i);
-                if (i % 10000 == 0) {
-		        rank = RB_RANK(tree, RB_ROOT(&root));
-        		if (rank == -2)
-		        	errx(1, "rank error");
-                }
+		if (i % 10000 == 0) {
+			rank = RB_RANK(tree, RB_ROOT(&root));
+			if (rank == -2)
+				errx(1, "rank error");
+		}
 	}
 	free(tmp);
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
@@ -414,16 +414,16 @@ main()
 			errx(1, "RB_PFINDC failed");
 		if (RB_REMOVEC(tree, &root, ins) == NULL)
 			errx(1, "RB_REMOVEC failed: %d", i);
-                if (i % 10000 == 0) {
-		        rank = RB_RANK(tree, RB_ROOT(&root));
-        		if (rank == -2)
-		        	errx(1, "rank error");
-                }
+		if (i % 10000 == 0) {
+			rank = RB_RANK(tree, RB_ROOT(&root));
+			if (rank == -2)
+				errx(1, "rank error");
+		}
 	}
 	free(tmp);
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
-	TDEBUGF("done removals in: %lld.%09ld s", diff.tv_sec, diff.tv_nsec);        
+	TDEBUGF("done removals in: %lld.%09ld s", diff.tv_sec, diff.tv_nsec);	
 #endif
 
 	TDEBUGF("doing 50%% insertions, 50%% lookups");
@@ -600,11 +600,11 @@ mix_operations(int *perm, int psize, struct node *nodes, int nsize, int insertio
 		if (RB_INSERT(tree, &root, tmp) != NULL)
 			errx(1, "RB_INSERT failed");
 		//print_tree(&root);
-                if (i % 10000 == 0) {
-		        rank = RB_RANK(tree, RB_ROOT(&root));
-        		if (rank == -2)
-		        	errx(1, "rank error");
-                }
+		if (i % 10000 == 0) {
+			rank = RB_RANK(tree, RB_ROOT(&root));
+			if (rank == -2)
+				errx(1, "rank error");
+		}
 		//TDEBUGF("%p:%p", (void *)root.root->node_link.child[0], (void *)root.root->node_link.child[1]);
 	}
 	tmp = &(nodes[insertions]);
