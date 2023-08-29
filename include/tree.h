@@ -763,16 +763,13 @@ name##_RB_REMOVE_START(struct name *head, struct type *elm)			\
 		}								\
 		_RB_SET_CHILD(rmin, _RB_LDIR, child, field);			\
 		_RB_SET_PARENT(cptr, rmin, field);				\
-		_RB_SET_PARENT(rmin, opar, field);				\
 		child = _RB_GET_CHILD(rmin, _RB_RDIR, field);			\
 		if (parent != rmin) {						\
 			_RB_SET_PARENT(parent, rmin, field);			\
 			_RB_SET_CHILD(rmin, _RB_RDIR, _RB_GET_CHILD(elm, _RB_RDIR, field), field);	\
 			_RB_GET_PARENT(rmin, parent, field);			\
 			_RB_STACK_POP(head, parent);				\
-			if (parent != NULL) {					\
-				_RB_REPLACE_CHILD(parent, _RB_LDIR, child, rmin, field);	\
-			}							\
+			_RB_REPLACE_CHILD(parent, _RB_LDIR, child, rmin, field);\
 			_RB_STACK_SET(head, sz - 1, rmin);			\
 		} else {							\
 			_RB_STACK_SET(head, sz - 1, NULL);			\
@@ -780,6 +777,7 @@ name##_RB_REMOVE_START(struct name *head, struct type *elm)			\
 			if (_RB_GET_RDIFF(elm, _RB_RDIR, field))		\
 				_RB_SET_RDIFF1(rmin, _RB_RDIR, field);		\
 		}								\
+		_RB_SET_PARENT(rmin, opar, field);				\
 	}									\
 	_RB_SWAP_CHILD_OR_ROOT(head, opar, elm, rmin, field);			\
 	if (child != NULL) {							\
