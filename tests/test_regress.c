@@ -170,13 +170,9 @@ main()
 	TDEBUGF("done getting max in: %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 	assert(ITER + 5 == ins->key);
 
-        print_tree(&root);
-
 	ins = RB_ROOT(&root);
         TDEBUGF("getting root");
         assert(RB_REMOVE(tree, &root, ins) == ins);
-
-        print_tree(&root);
 
 #ifdef DOAUGMENT
 	assert(ITER == (RB_ROOT(&root))->size);
@@ -243,7 +239,6 @@ main()
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 	tmp = malloc(sizeof(struct node));
 	for(i = 0; i < ITER; i++) {
-                        print_tree(&root);
 		tmp->key = i;
 		ins = RB_FIND(tree, &root, tmp);
 		assert(NULL != tmp);
@@ -274,7 +269,6 @@ main()
 	timespecsub(&end, &start, &diff);
 	TDEBUGF("done sequential insertions in: %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 
-        print_tree(&root);
 
 	TDEBUGF("doing find and remove in random order");
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
@@ -636,7 +630,6 @@ mix_operations(int *perm, int psize, struct node *nodes, int nsize, int insertio
 
 	for(i = 0; i < insertions; i++) {
                 //TDEBUGF("iteration %d", i);
-		print_tree(&root);
 		tmp = &(nodes[i]);
 		if (tmp == NULL) err(1, "malloc");
 		tmp->size = 1;
