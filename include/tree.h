@@ -393,6 +393,7 @@ name##_RB_INSERT(struct name *head, struct type *elm)				\
 	tmp = RB_ROOT(head);							\
 	if (tmp == NULL) {							\
 		RB_ROOT(head) = elm;						\
+		_RB_SET_PARENT(elm, NULL, field);				\
 		return (NULL);							\
 	}									\
 	while (tmp) {								\
