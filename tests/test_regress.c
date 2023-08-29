@@ -79,7 +79,7 @@ struct node {
 };
 
 RB_HEAD(tree, node);
-struct tree root;
+struct tree root = RB_INITIALIZER(&root);
 
 //#undef RB_AUGMENT
 //#define RB_AUGMENT(elm) tree_augment(elm)
@@ -329,6 +329,51 @@ main()
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
 	TDEBUGF("done removals in: %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+
+#ifdef RB_NEXT
+	TDEBUGF("starting sequential insertions");
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+	mix_operations(nums, ITER, nodes, ITER, ITER, 0, 0);
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+	timespecsub(&end, &start, &diff);
+	TDEBUGF("done sequential insertions in: %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+
+        tmp = RB_MIN(tree, &root);
+        assert(tmp != NULL);
+        assert(tmp->key == 0);
+        for(i = 1; i < ITER; i++) {
+                tmp = RB_NEXT(tree, tmp);
+                assert(tmp != NULL);
+                assert(tmp->key == i);
+        }
+
+        tmp = RB_MAX(tree, &root);
+        assert(tmp != NULL);
+        assert(tmp->key == ITER + 5);
+        for(i = 0; i < ITER; i++) {
+                tmp = RB_PREV(tree, tmp);
+                assert(tmp != NULL);
+                assert(tmp->key == ITER - 1 - i);
+        }
+
+	TDEBUGF("doing root removals");
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+	for (i = 0; i < ITER + 1; i++) {
+		tmp = RB_ROOT(&root);
+		assert(NULL != tmp);
+		assert(RB_REMOVE(tree, &root, tmp) == tmp);
+#ifdef RB_TEST_RANK
+		if (i % RANK_TEST_ITERATIONS == 0) {
+			rank = RB_RANK(tree, RB_ROOT(&root));
+			if (rank == -2)
+				errx(1, "rank error");
+		}
+#endif
+	}
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+	timespecsub(&end, &start, &diff);
+	TDEBUGF("done root removals in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+#endif
 
 #ifdef RB_PFIND
 	TDEBUGF("starting sequential insertions");

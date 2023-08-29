@@ -67,13 +67,11 @@
 /*
  * debug macros
  */
-#ifndef RB_DIAGNOSTIC
+#ifndef _RB_DIAGNOSTIC
 #define _RB_ASSERT(x)		do {} while (0)
-#define DEBUGF(fmt, ...)	do {} while (0)
 #else
 #include <assert.h>
 #define _RB_ASSERT(x)		assert(x)
-#define DEBUGF(fmt, ...)	fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
 #endif
 
 /* 
@@ -106,6 +104,9 @@ struct name {						\
 	struct type	*stack[RB_MAX_HEIGHT];		\
 	size_t		 top;				\
 }
+
+#define RB_INITIALIZER(root)				\
+{ NULL, { NULL }, 0 }
 
 #define _RB_GET_PARENT(elm, oelm, field)		do {} while (0)
 #define _RB_SET_PARENT(elm, pelm, field)		do {} while (0)
@@ -153,6 +154,9 @@ struct {						\
 struct name {						\
 	struct type *root;				\
 }
+
+#define RB_INITIALIZER(root)				\
+{ NULL }
 
 #define _RB_PDIR					2
 
@@ -213,6 +217,7 @@ _RB_BITS(_RB_GET_CHILD(elm, dir, field)) |= 1U;		\
 
 
 #define RB_ROOT(head)					(head)->root
+#define RB_EMPTY(head)					(RB_ROOT(head) == NULL)
 #define RB_LEFT(elm, field)				_RB_PTR(_RB_GET_CHILD(elm, _RB_LDIR, field))
 #define RB_RIGHT(elm, field)				_RB_PTR(_RB_GET_CHILD(elm, _RB_RDIR, field))
 
@@ -457,7 +462,7 @@ name##_RB_NFINDC(struct name *head, struct type *elm)				\
 		else								\
 			return (tmp);						\
 	}									\
-	return (res);						                \
+	return (res);								\
 }										\
 										\
 attr struct type *								\
@@ -503,7 +508,7 @@ name##_RB_PFINDC(struct name *head, struct type *elm)				\
 }
 #endif
 
-#define _RB_GENERATE_FIND(name, type, field, cmp, attr)		               	\
+#define _RB_GENERATE_FIND(name, type, field, cmp, attr)				\
 										\
 attr struct type *								\
 name##_RB_FIND(struct name *head, struct type *elm)				\
@@ -539,7 +544,7 @@ name##_RB_NFIND(struct name *head, struct type *elm)				\
 		else								\
 			return (tmp);						\
 	}									\
-	return (res);						                \
+	return (res);								\
 }										\
 										\
 attr struct type *								\
@@ -656,7 +661,7 @@ name##_RB_MINMAX(struct name *head, int dir)					\
 										\
 attr struct type *								\
 name##_RB_REMOVE_BALANCE(struct name *head, struct type *parent,		\
-	struct type *elm)							\
+    struct type *elm)								\
 {										\
 	struct type *gpar, *sibling;						\
 	__uintptr_t elmdir, sibdir, ssdiff, sodiff;				\
@@ -825,6 +830,51 @@ name##_RB_REMOVEC(struct name *head, struct type *elm)				\
 }
 #endif
 
+#ifndef RB_SMALL
+#define _RB_GENERATE_ITERATE(name, type, field, cmp, attr)		\
+									\
+attr struct type *							\
+name##_RB_NEXT(struct type *elm)					\
+{									\
+	struct type *parent = NULL;					\
+									\
+	if (RB_RIGHT(elm, field)) {					\
+		elm = RB_RIGHT(elm, field);				\
+		while (RB_LEFT(elm, field))				\
+			elm = RB_LEFT(elm, field);			\
+	} else {							\
+		_RB_GET_PARENT(elm, parent, field);			\
+		while (parent && elm == RB_RIGHT(parent, field)) {	\
+			elm = parent;					\
+			_RB_GET_PARENT(parent, parent, field);		\
+		}							\
+		elm = parent;						\
+	}								\
+	return (elm);							\
+}									\
+									\
+attr struct type *							\
+name##_RB_PREV(struct type *elm)					\
+{									\
+	struct type *parent = NULL;					\
+									\
+	if (RB_LEFT(elm, field)) {					\
+		elm = RB_LEFT(elm, field);				\
+		while (RB_RIGHT(elm, field))				\
+			elm = RB_RIGHT(elm, field);			\
+	} else {							\
+		_RB_GET_PARENT(elm, parent, field);			\
+		while (parent && elm == RB_LEFT(parent, field)) {	\
+			elm = parent;					\
+			_RB_GET_PARENT(parent, parent, field);		\
+		}							\
+		elm = parent;						\
+	}								\
+	return (elm);							\
+}
+#else
+#define _RB_GENERATE_ITERATE(name, type, field, cmp, attr)
+#endif
 
 #define RB_GENERATE(name, type, field, cmp)					\
 	_RB_GENERATE_INTERNAL(name, type, field, cmp,)
@@ -839,6 +889,7 @@ name##_RB_REMOVEC(struct name *head, struct type *elm)				\
 	_RB_GENERATE_INSERT(name, type, field, cmp, attr)			\
 	_RB_GENERATE_REMOVE(name, type, field, cmp, attr)			\
 	_RB_GENERATE_REMOVEC(name, type, field, cmp, attr)			\
+	_RB_GENERATE_ITERATE(name, type, field, cmp, attr)			\
 	_RB_GENERATE_MINMAX(name, type, field, cmp, attr)
 
 
@@ -850,7 +901,8 @@ name##_RB_REMOVEC(struct name *head, struct type *elm)				\
 
 #define _RB_PROTOTYPE_INTERNAL(name, type, field, cmp, attr)			\
 	_RB_PROTOTYPE_INTERNAL_COMMON(name, type, field, cmp, attr)		\
-	_RB_PROTOTYPE_INTERNAL_RBSMALL(name, type, field, cmp, attr)
+	_RB_PROTOTYPE_INTERNAL_ITERATE(name, type, field, cmp, attr)		\
+	_RB_PROTOTYPE_INTERNAL_CACHE(name, type, field, cmp, attr)
 
 #define _RB_PROTOTYPE_INTERNAL_COMMON(name, type, field, cmp, attr)		\
 int			 name##_RB_RANK(const struct type *);			\
@@ -861,15 +913,22 @@ attr struct type	*name##_RB_INSERT(struct name *, struct type *);	\
 attr struct type	*name##_RB_REMOVE(struct name *, struct type *);	\
 attr struct type	*name##_RB_MINMAX(struct name *, int);			\
 
+#ifdef RB_SMALL
+#define _RB_PROTOTYPE_INTERNAL_ITERATE(name, type, field, cmp, attr)
+#else
+#define _RB_PROTOTYPE_INTERNAL_ITERATE(name, type, field, cmp, attr)		\
+attr struct type	*name##_RB_NEXT(struct type *);				\
+attr struct type	*name##_RB_PREV(struct type *);
+#endif
 
 #ifdef RB_SMALL
-#define _RB_PROTOTYPE_INTERNAL_RBSMALL(name, type, field, cmp, attr)		\
+#define _RB_PROTOTYPE_INTERNAL_CACHE(name, type, field, cmp, attr)		\
 attr struct type	*name##_RB_FINDC(struct name *, struct type *);		\
 attr struct type	*name##_RB_NFINDC(struct name *, struct type *);	\
 attr struct type	*name##_RB_PFINDC(struct name *, struct type *);	\
 attr struct type	*name##_RB_REMOVEC(struct name *, struct type *);
 #else
-#define _RB_PROTOTYPE_INTERNAL_RBSMALL(name, type, field, cmp, attr)
+#define _RB_PROTOTYPE_INTERNAL_CACHE(name, type, field, cmp, attr)
 #endif
 
 
@@ -882,12 +941,16 @@ attr struct type	*name##_RB_REMOVEC(struct name *, struct type *);
 #define RB_MIN(name, head)		name##_RB_MINMAX(head, _RB_LDIR)
 #define RB_MAX(name, head)		name##_RB_MINMAX(head, _RB_RDIR)
 
-
 #ifdef RB_SMALL
 #define RB_FINDC(name, head, elm)	name##_RB_FINDC(head, elm)
 #define RB_NFINDC(name, head, elm)	name##_RB_NFINDC(head, elm)
 #define RB_PFINDC(name, head, elm)	name##_RB_PFINDC(head, elm)
 #define RB_REMOVEC(name, head, elm)	name##_RB_REMOVEC(head, elm)
+#endif
+
+#ifndef RB_SMALL
+#define RB_NEXT(name, elm)		name##_RB_NEXT(elm)
+#define RB_PREV(name, elm)		name##_RB_PREV(elm)
 #endif
 
 #endif /* _SYS_TREE_H_ */
