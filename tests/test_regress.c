@@ -188,7 +188,6 @@ main()
 		if (i % RANK_TEST_ITERATIONS == 0) {
 			rank = RB_RANK(tree, RB_ROOT(&root));
 			assert(-2 != rank);
-                        TDEBUGF("iteration %d, rank %d", i, rank);
                         print_tree(&root);
 		}
 #endif
@@ -338,23 +337,33 @@ main()
 	timespecsub(&end, &start, &diff);
 	TDEBUGF("done sequential insertions in: %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 
+        TDEBUGF("iterating over tree with RB_NEXT");
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
         tmp = RB_MIN(tree, &root);
         assert(tmp != NULL);
         assert(tmp->key == 0);
         for(i = 1; i < ITER; i++) {
-                tmp = RB_NEXT(tree, tmp);
+                tmp = RB_NEXT(tree, &root, tmp);
                 assert(tmp != NULL);
                 assert(tmp->key == i);
         }
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+	timespecsub(&end, &start, &diff);
+        TDEBUGF("done iterations in %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 
+        TDEBUGF("iterating over tree with RB_PREV");
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
         tmp = RB_MAX(tree, &root);
         assert(tmp != NULL);
         assert(tmp->key == ITER + 5);
         for(i = 0; i < ITER; i++) {
-                tmp = RB_PREV(tree, tmp);
+                tmp = RB_PREV(tree, &root, tmp);
                 assert(tmp != NULL);
                 assert(tmp->key == ITER - 1 - i);
         }
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+        timespecsub(&end, &start, &diff);
+        TDEBUGF("done iterations in %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 
 	TDEBUGF("doing root removals");
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
@@ -507,6 +516,111 @@ main()
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
 	TDEBUGF("done removals in: %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);	
+#endif
+
+	TDEBUGF("starting sequential insertions");
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+	mix_operations(nums, ITER, nodes, ITER, ITER, 0, 0);
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+	timespecsub(&end, &start, &diff);
+	TDEBUGF("done sequential insertions in: %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+
+#ifdef RB_FOREACH
+        TDEBUGF("iterating over tree with RB_FOREACH");
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+        i = 0;
+        RB_FOREACH(ins, tree, &root) {
+                if (i < ITER)
+                        assert(ins->key == i);
+                else
+                        assert(ins->key == ITER + 5);
+                i++;
+        }
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+        timespecsub(&end, &start, &diff);
+        TDEBUGF("done iterations in %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+#endif
+
+#ifdef RB_FOREACH_REVERSE
+        TDEBUGF("iterating over tree with RB_FOREACH_REVERSE");
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+        i = ITER + 5;
+        RB_FOREACH_REVERSE(ins, tree, &root) {
+                assert(ins->key == i);
+                if (i > ITER)
+                        i = ITER - 1;
+                else
+                        i--;
+        }
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+        timespecsub(&end, &start, &diff);
+        TDEBUGF("done iterations in %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+#endif
+
+	TDEBUGF("doing root removals");
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+	for (i = 0; i < ITER + 1; i++) {
+		tmp = RB_ROOT(&root);
+		assert(NULL != tmp);
+		assert(RB_REMOVE(tree, &root, tmp) == tmp);
+#ifdef RB_TEST_RANK
+		if (i % RANK_TEST_ITERATIONS == 0) {
+			rank = RB_RANK(tree, RB_ROOT(&root));
+			if (rank == -2)
+				errx(1, "rank error");
+		}
+#endif
+	}
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+	timespecsub(&end, &start, &diff);
+	TDEBUGF("done root removals in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+
+#ifdef RB_FOREACH_SAFE
+	TDEBUGF("starting sequential insertions");
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+	mix_operations(nums, ITER, nodes, ITER, ITER, 0, 0);
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+	timespecsub(&end, &start, &diff);
+	TDEBUGF("done sequential insertions in: %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+
+        TDEBUGF("iterating over tree and clearing with RB_FOREACH_SAFE");
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+        i = 0;
+        RB_FOREACH_SAFE(ins, tree, &root, tmp) {
+                if (i < ITER)
+                        assert(ins->key == i);
+                else
+                        assert(ins->key == ITER + 5);
+                i++;
+		assert(RB_REMOVE(tree, &root, ins) == ins);
+        }
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+        timespecsub(&end, &start, &diff);
+        TDEBUGF("done iterations in %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+#endif
+
+#ifdef RB_FOREACH_REVERSE_SAFE
+	TDEBUGF("starting sequential insertions");
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+	mix_operations(nums, ITER, nodes, ITER, ITER, 0, 0);
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+	timespecsub(&end, &start, &diff);
+	TDEBUGF("done sequential insertions in: %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+
+        TDEBUGF("iterating over tree and clearing with RB_FOREACH_REVERSE_SAFE");
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+        i = ITER + 5;
+        RB_FOREACH_REVERSE_SAFE(ins, tree, &root, tmp) {
+                assert(ins->key == i);
+                if (i > ITER)
+                        i = ITER - 1;
+                else
+                        i--;
+                assert(RB_REMOVE(tree, &root, ins) == ins);
+        }
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+        timespecsub(&end, &start, &diff);
+        TDEBUGF("done iterations in %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 #endif
 
 	TDEBUGF("doing 50%% insertions, 50%% lookups");

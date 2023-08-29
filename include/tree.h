@@ -876,6 +876,7 @@ name##_RB_PREV(struct type *elm)					\
 #define _RB_GENERATE_ITERATE(name, type, field, cmp, attr)
 #endif
 
+
 #define RB_GENERATE(name, type, field, cmp)					\
 	_RB_GENERATE_INTERNAL(name, type, field, cmp,)
 
@@ -949,8 +950,41 @@ attr struct type	*name##_RB_REMOVEC(struct name *, struct type *);
 #endif
 
 #ifndef RB_SMALL
-#define RB_NEXT(name, elm)		name##_RB_NEXT(elm)
-#define RB_PREV(name, elm)		name##_RB_PREV(elm)
+#define RB_NEXT(name, head, elm)	name##_RB_NEXT(elm)
+#define RB_PREV(name, head, elm)	name##_RB_PREV(elm)
+#endif
+
+
+#ifndef RB_SMALL
+#define RB_FOREACH(x, name, head)					\
+	for ((x) = RB_MIN(name, head);					\
+	     (x) != NULL;						\
+	     (x) = name##_RB_NEXT(x))
+
+#define RB_FOREACH_FROM(x, name, y)					\
+	for ((x) = (y);							\
+	    ((x) != NULL) && ((y) = name##_RB_NEXT(x), (x) != NULL);	\
+	     (x) = (y))
+
+#define RB_FOREACH_SAFE(x, name, head, y)				\
+	for ((x) = RB_MIN(name, head);					\
+	    ((x) != NULL) && ((y) = name##_RB_NEXT(x), (x) != NULL);	\
+	     (x) = (y))
+
+#define RB_FOREACH_REVERSE(x, name, head)				\
+	for ((x) = RB_MAX(name, head);					\
+	     (x) != NULL;						\
+	     (x) = name##_RB_PREV(x))
+
+#define RB_FOREACH_REVERSE_FROM(x, name, y)				\
+	for ((x) = (y);							\
+	    ((x) != NULL) && ((y) = name##_RB_PREV(x), (x) != NULL);	\
+	     (x) = (y))
+
+#define RB_FOREACH_REVERSE_SAFE(x, name, head, y)			\
+	for ((x) = RB_MAX(name, head);					\
+	    ((x) != NULL) && ((y) = name##_RB_PREV(x), (x) != NULL);	\
+	     (x) = (y))
 #endif
 
 #endif /* _SYS_TREE_H_ */
