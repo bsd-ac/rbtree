@@ -14,6 +14,7 @@ add_global_arguments(['-Wno-unused-function'],
 incdir = include_directories('include')
 
 freebsd = include_directories('freebsd')
+openbsd = include_directories('openbsd')
 
 subdir('include')
 subdir('tests')
