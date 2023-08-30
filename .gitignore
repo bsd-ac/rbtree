@@ -1,6 +1,9 @@
 # ccls
 .ccls-cache
 
+# vscode
+.vscode
+
 # meson
 build/**
 
