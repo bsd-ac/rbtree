@@ -419,7 +419,53 @@ name##_RB_INSERT(struct name *head, struct type *elm)				\
 	/* the stack contains all the nodes upto and including parent */	\
 	_RB_STACK_POP(head, parent);						\
 	return (name##_RB_INSERT_FINISH(head, parent, insdir, elm));		\
+}
+
+#ifdef RB_SMALL
+#define _RB_GENERATE_INSERT_ITERATE(name, type, field, cmp, attr)
+#else
+#define _RB_GENERATE_INSERT_ITERATE(name, type, field, cmp, attr)		\
+										\
+attr struct type *								\
+name##_RB_INSERT_NEXT(struct name *head, struct type *elm, struct type *next)	\
+{										\
+	struct type *tmp;							\
+	__uintptr_t insdir = _RB_RDIR;						\
+	_RB_SET_CHILD(next, _RB_LDIR, NULL, field);				\
+	_RB_SET_CHILD(next, _RB_RDIR, NULL, field);				\
+	_RB_ASSERT((cmp)(elm, next) < 0);					\
+	if (name##_RB_NEXT(elm) != NULL)					\
+		_RB_ASSERT((cmp)(next, name##_RB_NEXT(elm)) < 0);		\
+										\
+	tmp = RB_RIGHT(elm, field);						\
+	while (tmp) {								\
+		elm = tmp;							\
+		tmp = RB_LEFT(tmp, field);					\
+		insdir = _RB_LDIR;						\
+	}									\
+	return name##_RB_INSERT_FINISH(head, elm, insdir, next);		\
 }										\
+										\
+attr struct type *								\
+name##_RB_INSERT_PREV(struct name *head, struct type *elm, struct type *prev)	\
+{										\
+	struct type *tmp;							\
+	__uintptr_t insdir = _RB_LDIR;						\
+	_RB_SET_CHILD(prev, _RB_LDIR, NULL, field);				\
+	_RB_SET_CHILD(prev, _RB_RDIR, NULL, field);				\
+	_RB_ASSERT((cmp)(elm, prev) > 0);					\
+	if (name##_RB_PREV(elm) != NULL)					\
+		_RB_ASSERT((cmp)(prev, name##_RB_PREV(elm)) > 0);		\
+										\
+	tmp = RB_RIGHT(elm, field);						\
+	while (tmp) {								\
+		elm = tmp;							\
+		tmp = RB_LEFT(tmp, field);					\
+		insdir = _RB_RDIR;						\
+	}									\
+	return name##_RB_INSERT_FINISH(head, elm, insdir, prev);		\
+}
+#endif
 
 #ifdef RB_SMALL
 #define _RB_GENERATE_FINDC(name, type, field, cmp, attr)			\
@@ -888,6 +934,7 @@ name##_RB_PREV(struct type *elm)					\
 	_RB_GENERATE_FIND(name, type, field, cmp, attr)				\
 	_RB_GENERATE_FINDC(name, type, field, cmp, attr)			\
 	_RB_GENERATE_INSERT(name, type, field, cmp, attr)			\
+	_RB_GENERATE_INSERT_ITERATE(name, type, field, cmp, attr)		\
 	_RB_GENERATE_REMOVE(name, type, field, cmp, attr)			\
 	_RB_GENERATE_REMOVEC(name, type, field, cmp, attr)			\
 	_RB_GENERATE_ITERATE(name, type, field, cmp, attr)			\
@@ -919,7 +966,9 @@ attr struct type	*name##_RB_MINMAX(struct name *, int);			\
 #else
 #define _RB_PROTOTYPE_INTERNAL_ITERATE(name, type, field, cmp, attr)		\
 attr struct type	*name##_RB_NEXT(struct type *);				\
-attr struct type	*name##_RB_PREV(struct type *);
+attr struct type	*name##_RB_PREV(struct type *);				\
+attr struct type	*name##_RB_INSERT_NEXT(struct name *, struct type *, struct type *);	\
+attr struct type	*name##_RB_INSERT_PREV(struct name *, struct type *, struct type *);
 #endif
 
 #ifdef RB_SMALL
@@ -933,25 +982,27 @@ attr struct type	*name##_RB_REMOVEC(struct name *, struct type *);
 #endif
 
 
-#define RB_RANK(name, head)		name##_RB_RANK(head)
-#define RB_FIND(name, head, elm)	name##_RB_FIND(head, elm)
-#define RB_NFIND(name, head, elm)	name##_RB_NFIND(head, elm)
-#define RB_PFIND(name, head, elm)	name##_RB_PFIND(head, elm)
-#define RB_INSERT(name, head, elm)	name##_RB_INSERT(head, elm)
-#define RB_REMOVE(name, head, elm)	name##_RB_REMOVE(head, elm)
-#define RB_MIN(name, head)		name##_RB_MINMAX(head, _RB_LDIR)
-#define RB_MAX(name, head)		name##_RB_MINMAX(head, _RB_RDIR)
+#define RB_RANK(name, head)			name##_RB_RANK(head)
+#define RB_FIND(name, head, elm)		name##_RB_FIND(head, elm)
+#define RB_NFIND(name, head, elm)		name##_RB_NFIND(head, elm)
+#define RB_PFIND(name, head, elm)		name##_RB_PFIND(head, elm)
+#define RB_INSERT(name, head, elm)		name##_RB_INSERT(head, elm)
+#define RB_REMOVE(name, head, elm)		name##_RB_REMOVE(head, elm)
+#define RB_MIN(name, head)			name##_RB_MINMAX(head, _RB_LDIR)
+#define RB_MAX(name, head)			name##_RB_MINMAX(head, _RB_RDIR)
 
 #ifdef RB_SMALL
-#define RB_FINDC(name, head, elm)	name##_RB_FINDC(head, elm)
-#define RB_NFINDC(name, head, elm)	name##_RB_NFINDC(head, elm)
-#define RB_PFINDC(name, head, elm)	name##_RB_PFINDC(head, elm)
-#define RB_REMOVEC(name, head, elm)	name##_RB_REMOVEC(head, elm)
+#define RB_FINDC(name, head, elm)		name##_RB_FINDC(head, elm)
+#define RB_NFINDC(name, head, elm)		name##_RB_NFINDC(head, elm)
+#define RB_PFINDC(name, head, elm)		name##_RB_PFINDC(head, elm)
+#define RB_REMOVEC(name, head, elm)		name##_RB_REMOVEC(head, elm)
 #endif
 
 #ifndef RB_SMALL
-#define RB_NEXT(name, head, elm)	name##_RB_NEXT(elm)
-#define RB_PREV(name, head, elm)	name##_RB_PREV(elm)
+#define RB_NEXT(name, head, elm)		name##_RB_NEXT(elm)
+#define RB_PREV(name, head, elm)		name##_RB_PREV(elm)
+#define RB_INSERT_NEXT(name, head, elm, next)	name##_RB_INSERT_NEXT(head, elm, next)
+#define RB_INSERT_PREV(name, head, elm, prev)	name##_RB_INSERT_PREV(head, elm, prev)
 #endif
 
 

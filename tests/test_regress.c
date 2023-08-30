@@ -31,9 +31,9 @@ struct timespec start, end, diff, rstart, rend, rdiff, rtot = {0, 0};
 #endif
 
 //#define RB_SMALL
-//#define RB_TEST_RANK
+#define RB_TEST_RANK
 //#define RB_TEST_DIAGNOSTIC
-//#define RB_DIAGNOSTIC
+#define _RB_DIAGNOSTIC
 #include "tree.h"
 
 #define TDEBUGF(fmt, ...)	fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
@@ -45,7 +45,7 @@ struct timespec start, end, diff, rstart, rend, rdiff, rtot = {0, 0};
 #define SEED_RANDOM srandom
 #endif
 
-int ITER=1500000;
+int ITER=150000;
 int RANK_TEST_ITERATIONS=10000;
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -616,6 +616,86 @@ main()
                         i = ITER - 1;
                 else
                         i--;
+                assert(RB_REMOVE(tree, &root, ins) == ins);
+        }
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+        timespecsub(&end, &start, &diff);
+        TDEBUGF("done iterations in %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+#endif
+
+#ifdef RB_INSERT_NEXT
+        TDEBUGF("starting sequential insertions using INSERT_NEXT");
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+        tmp = &(nodes[0]);
+        tmp->size = 1;
+        tmp->height = 1;
+        tmp->key = 0;
+        if (RB_INSERT(tree, &root, tmp) != NULL)
+                errx(1, "RB_INSERT failed");
+        ins = tmp;
+	for(i = 1; i < ITER; i++) {
+		tmp = &(nodes[i]);
+		tmp->size = 1;
+		tmp->height = 1;
+		tmp->key = i;
+		if (RB_INSERT_NEXT(tree, &root, ins, tmp) != NULL)
+			errx(1, "RB_INSERT failed");
+                ins = tmp;
+#ifdef RB_TEST_RANK
+		if (i % RANK_TEST_ITERATIONS == 0) {
+			rank = RB_RANK(tree, RB_ROOT(&root));
+			if (rank == -2)
+				errx(1, "rank error");
+		}
+#endif
+	}
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+        timespecsub(&end, &start, &diff);
+        TDEBUGF("done insertions in %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+
+        TDEBUGF("iterating over tree and clearing with RB_FOREACH_REVERSE_SAFE");
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+        RB_FOREACH_REVERSE_SAFE(ins, tree, &root, tmp) {
+                assert(RB_REMOVE(tree, &root, ins) == ins);
+        }
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+        timespecsub(&end, &start, &diff);
+        TDEBUGF("done iterations in %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+#endif
+
+#ifdef RB_INSERT_PREV
+        TDEBUGF("starting sequential insertions using INSERT_PREV");
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+        tmp = &(nodes[ITER]);
+        tmp->size = 1;
+        tmp->height = 1;
+        tmp->key = ITER;
+        if (RB_INSERT(tree, &root, tmp) != NULL)
+                errx(1, "RB_INSERT failed");
+        ins = tmp;
+	for(i = ITER - 1; i >= 0; i--) {
+		tmp = &(nodes[i]);
+		tmp->size = 1;
+		tmp->height = 1;
+		tmp->key = i;
+		if (RB_INSERT_PREV(tree, &root, ins, tmp) != NULL)
+			errx(1, "RB_INSERT failed");
+                ins = tmp;
+#ifdef RB_TEST_RANK
+		if (i % RANK_TEST_ITERATIONS == 0) {
+			rank = RB_RANK(tree, RB_ROOT(&root));
+			if (rank == -2)
+				errx(1, "rank error");
+		}
+#endif
+	}
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+        timespecsub(&end, &start, &diff);
+        TDEBUGF("done insertions in %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+
+        TDEBUGF("iterating over tree and clearing with RB_FOREACH_REVERSE_SAFE");
+        clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+        RB_FOREACH_REVERSE_SAFE(ins, tree, &root, tmp) {
                 assert(RB_REMOVE(tree, &root, ins) == ins);
         }
         clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);

@@ -15,7 +15,9 @@
                 "rbtree.h": "c",
                 "typeinfo": "c",
                 "time.h": "c",
-                "stdio.h": "c"
+                "stdio.h": "c",
+                "cstdlib": "c",
+                "random": "c"
         },
         "C_Cpp.errorSquiggles": "disabled"
 }
