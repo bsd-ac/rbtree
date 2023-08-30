@@ -995,7 +995,7 @@ name##_RB_PREV(struct type *elm)					\
 	_RB_PROTOTYPE_INTERNAL_CACHE(name, type, field, cmp, attr)
 
 #define _RB_PROTOTYPE_INTERNAL_COMMON(name, type, field, cmp, attr)		\
-int			 name##_RB_RANK(const struct type *);			\
+attr int			 name##_RB_RANK(const struct type *);			\
 attr struct type	*name##_RB_FIND(struct name *, struct type *);		\
 attr struct type	*name##_RB_NFIND(struct name *, struct type *);		\
 attr struct type	*name##_RB_PFIND(struct name *, struct type *);		\
