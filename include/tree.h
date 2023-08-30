@@ -752,6 +752,7 @@ name##_RB_REMOVE_BALANCE(struct name *head, struct type *parent,		\
 		_RB_SET_CHILD(parent, _RB_LDIR, NULL, field);			\
 		_RB_SET_CHILD(parent, _RB_RDIR, NULL, field);			\
 		elm = parent;							\
+		(void)_RB_AUGMENT(elm);						\
 		_RB_STACK_POP(head, parent);					\
 		_RB_GET_PARENT(parent, parent, field);				\
 		if (parent == NULL) {						\
@@ -759,19 +760,22 @@ name##_RB_REMOVE_BALANCE(struct name *head, struct type *parent,		\
 		}								\
 	}									\
 	do {									\
+		_RB_ASSERT(parent != NULL);					\
 		_RB_STACK_POP(head, gpar);					\
 		_RB_GET_PARENT(parent, gpar, field);				\
 		elmdir = RB_LEFT(parent, field) == elm ? _RB_LDIR : _RB_RDIR;	\
 		if (_RB_GET_RDIFF(parent, elmdir, field) == 0) {		\
 			/* case (1) */						\
 			_RB_FLIP_RDIFF(parent, elmdir, field);			\
-			return (NULL);						\
+			_RB_STACK_PUSH(head, gpar);				\
+			return (parent);					\
 		}								\
 		/* case 2 */							\
 		sibdir = _RB_ODIR(elmdir);					\
 		if (_RB_GET_RDIFF(parent, sibdir, field)) {			\
 			/* case 2.1 */						\
 			_RB_FLIP_RDIFF(parent, sibdir, field);			\
+			(void)_RB_AUGMENT(parent);				\
 			continue;						\
 		}								\
 		/* case 2.2 */							\
@@ -783,6 +787,7 @@ name##_RB_REMOVE_BALANCE(struct name *head, struct type *parent,		\
 			/* case 2.2a */						\
 			_RB_FLIP_RDIFF(sibling, elmdir, field);			\
 			_RB_FLIP_RDIFF(sibling, sibdir, field);			\
+			(void)_RB_AUGMENT(parent);				\
 			continue;						\
 		}								\
 		extend = 0;							\
@@ -811,9 +816,14 @@ name##_RB_REMOVE_BALANCE(struct name *head, struct type *parent,		\
 		if (extend) {							\
 			_RB_SET_RDIFF1(elm, elmdir, field);			\
 		}								\
-		return (parent);						\
+		(void)_RB_AUGMENT(parent);					\
+		if (elm != sibling)						\
+			(void)_RB_AUGMENT(sibling);				\
+		_RB_STACK_PUSH(head, gpar);					\
+		return (elm);							\
 	} while ((elm = parent, (parent = gpar) != NULL));			\
-	return (NULL);								\
+	_RB_STACK_PUSH(head, NULL);						\
+	return (elm);								\
 }										\
 										\
 attr struct type *								\
@@ -868,7 +878,8 @@ name##_RB_REMOVE_START(struct name *head, struct type *elm)			\
 		_RB_SET_PARENT(child, parent, field);				\
 	}									\
 	if (parent != NULL) {							\
-		name##_RB_REMOVE_BALANCE(head, parent, child);			\
+		parent = name##_RB_REMOVE_BALANCE(head, parent, child);		\
+		_RB_AUGMENT_WALK(head, parent, field);				\
 	}									\
 	return (elm);								\
 }										\
