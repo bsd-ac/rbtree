@@ -31,9 +31,9 @@ struct timespec start, end, diff, rstart, rend, rdiff, rtot = {0, 0};
 #endif
 
 //#define RB_SMALL
-#define RB_TEST_RANK
+//#define RB_TEST_RANK
 //#define RB_TEST_DIAGNOSTIC
-#define _RB_DIAGNOSTIC
+//#define _RB_DIAGNOSTIC
 
 #ifdef DOAUGMENT
 #define RB_AUGMENT(elm) tree_augment(elm)
@@ -855,7 +855,7 @@ tree_augment(struct node *elm)
 		elm->height = newheight;
 		return 1;
 	}
-	return 1;
+	return 0;
 }
 #endif
 
