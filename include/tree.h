@@ -221,6 +221,26 @@ _RB_BITS(_RB_GET_CHILD(elm, dir, field)) |= 1U;		\
 #define RB_LEFT(elm, field)				_RB_PTR(_RB_GET_CHILD(elm, _RB_LDIR, field))
 #define RB_RIGHT(elm, field)				_RB_PTR(_RB_GET_CHILD(elm, _RB_RDIR, field))
 
+
+/*
+ * RB_AUGMENT should only return true when the update changes the node data,
+ * so that updating can be stopped short of the root when it returns false.
+ */
+#ifndef RB_AUGMENT
+#define _RB_AUGMENT(x)	(0)
+#else
+#define _RB_AUGMENT(x)	(RB_AUGMENT(x))
+#endif
+
+#define _RB_AUGMENT_WALK(head, elm, field) do {				\
+	__typeof(elm) tmp_up = (elm);					\
+	while (tmp_up != NULL && _RB_AUGMENT(tmp_up)) {			\
+		_RB_GET_PARENT(tmp_up, tmp_up, field);			\
+		_RB_STACK_POP(head, tmp_up);				\
+	}								\
+} while (0)
+
+
 /*
  *      elm            celm
  *      / \            / \
@@ -338,7 +358,8 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,		\
 		if (_RB_GET_RDIFF(parent, elmdir, field)) {			\
 			/* case (1) */						\
 			_RB_FLIP_RDIFF(parent, elmdir, field);			\
-			return (NULL);						\
+			_RB_STACK_PUSH(head, parent);				\
+			return (elm);						\
 		}								\
 		_RB_STACK_POP(head, gpar);					\
 		_RB_GET_PARENT(parent, gpar, field);				\
@@ -347,6 +368,7 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,		\
 		_RB_FLIP_RDIFF(parent, sibdir, field);				\
 		if (_RB_GET_RDIFF(parent, sibdir, field)) {			\
 			/* case (2.1) */					\
+			_RB_AUGMENT(elm);					\
 			elm = parent;						\
 			continue;						\
 		}								\
@@ -364,9 +386,14 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,		\
 		_RB_ROTATE(parent, child, sibdir, field);			\
 		_RB_SET_PARENT(child, gpar, field);				\
 		_RB_SWAP_CHILD_OR_ROOT(head, gpar, parent, child, field);	\
+		(void)_RB_AUGMENT(parent);					\
+		if (elm != child)						\
+			(void)_RB_AUGMENT(elm);					\
+		_RB_STACK_PUSH(head, gpar);					\
 		return (child);							\
 	} while ((parent = gpar) != NULL);					\
-	return (NULL);								\
+	_RB_STACK_PUSH(head, NULL);						\
+	return (elm);								\
 }										\
 										\
 /* Inserts a node into the RB tree */						\
@@ -374,13 +401,18 @@ attr struct type *								\
 name##_RB_INSERT_FINISH(struct name *head, struct type *parent,			\
     __uintptr_t insdir, struct type *elm)					\
 {										\
+	struct type *tmp = elm;							\
 	_RB_SET_PARENT(elm, parent, field);					\
 	if (_RB_GET_CHILD(parent, insdir, field))				\
 		_RB_SET_CHILD(parent, insdir, elm, field);			\
 	else {									\
 		_RB_SET_CHILD(parent, insdir, elm, field);			\
-		name##_RB_INSERT_BALANCE(head, parent, elm);			\
+		tmp = name##_RB_INSERT_BALANCE(head, parent, elm);		\
+		_RB_STACK_POP(head, parent);					\
+		_RB_GET_PARENT(tmp, parent, field);				\
 	}									\
+	_RB_AUGMENT(tmp);							\
+	_RB_AUGMENT_WALK(head, parent, field);					\
 	return (NULL);								\
 }										\
 										\
