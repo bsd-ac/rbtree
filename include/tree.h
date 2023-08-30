@@ -368,7 +368,7 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,		\
 		_RB_FLIP_RDIFF(parent, sibdir, field);				\
 		if (_RB_GET_RDIFF(parent, sibdir, field)) {			\
 			/* case (2.1) */					\
-			_RB_AUGMENT(elm);					\
+			(void)_RB_AUGMENT(elm);					\
 			elm = parent;						\
 			continue;						\
 		}								\
@@ -411,7 +411,7 @@ name##_RB_INSERT_FINISH(struct name *head, struct type *parent,			\
 		_RB_STACK_POP(head, parent);					\
 		_RB_GET_PARENT(tmp, parent, field);				\
 	}									\
-	_RB_AUGMENT(tmp);							\
+	(void)_RB_AUGMENT(tmp);							\
 	_RB_AUGMENT_WALK(head, parent, field);					\
 	return (NULL);								\
 }										\
@@ -830,7 +830,6 @@ attr struct type *								\
 name##_RB_REMOVE_START(struct name *head, struct type *elm)			\
 {										\
 	struct type *parent, *opar, *child, *rmin, *cptr;			\
-	__uintptr_t elmdir;							\
 	size_t sz;								\
 										\
 	parent = NULL;								\

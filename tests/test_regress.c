@@ -34,6 +34,11 @@ struct timespec start, end, diff, rstart, rend, rdiff, rtot = {0, 0};
 #define RB_TEST_RANK
 //#define RB_TEST_DIAGNOSTIC
 #define _RB_DIAGNOSTIC
+
+#ifdef DOAUGMENT
+#define RB_AUGMENT(elm) tree_augment(elm)
+#endif
+
 #include "tree.h"
 
 #define TDEBUGF(fmt, ...)	fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
@@ -80,9 +85,6 @@ struct node {
 
 RB_HEAD(tree, node);
 struct tree root = RB_INITIALIZER(&root);
-
-//#undef RB_AUGMENT
-//#define RB_AUGMENT(elm) tree_augment(elm)
 
 RB_PROTOTYPE(tree, node, node_link, compare)
 
@@ -853,7 +855,7 @@ tree_augment(struct node *elm)
 		elm->height = newheight;
 		return 1;
 	}
-	return 0;
+	return 1;
 }
 #endif
 
@@ -877,6 +879,12 @@ mix_operations(int *perm, int psize, struct node *nodes, int nsize, int insertio
 		//TDEBUGF("inserting %d", tmp->key);
 		if (RB_INSERT(tree, &root, tmp) != NULL)
 			errx(1, "RB_INSERT failed");
+                print_tree(&root);
+#if DOAUGMENT
+                //TDEBUGF("size = %zu", RB_ROOT(&root)->size);
+                assert(RB_ROOT(&root)->size == i + 1);
+#endif
+
 #ifdef RB_TEST_RANK
 		if (i % RANK_TEST_ITERATIONS == 0) {
 			rank = RB_RANK(tree, RB_ROOT(&root));
