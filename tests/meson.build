@@ -22,3 +22,6 @@ foreach ts : test_sources
 	benchmark('native-2ptr-augment-' + ts, t_2ptr_aug)
 	benchmark('native-3ptr-augment-' + ts, t_3ptr_aug)
 endforeach
+
+test_subr = executable('test_subr', ['test_subr.c', 'subr_tree.c'], c_args : ['-DRBT_SMALL'], include_directories : incdir)
+test('test_subr', test_subr)
