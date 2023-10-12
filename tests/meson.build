@@ -23,6 +23,5 @@ foreach ts : test_sources
 	benchmark('native-3ptr-augment-' + ts, t_3ptr_aug)
 endforeach
 
-c.preprocess( ['test_subr.c', 'subr_tree.c'], include_directories : incdir)
 test_subr = executable('test_subr', ['test_subr.c', 'subr_tree.c'], include_directories : incdir)
 test('test_subr', test_subr)
