@@ -79,8 +79,6 @@
  */
 #define _RB_LOWMASK					((__uintptr_t)3U)
 #define _RB_PTR(elm)					(__typeof(elm))((__uintptr_t)(elm) & ~_RB_LOWMASK)
-/* this is used for converting a struct type * to a __uintptr_t and can also be used as an lvalue */
-#define _RB_BITS(elm)					(*(__uintptr_t *)((char *)&elm))
 
 #define _RB_LDIR					((__uintptr_t)0U)
 #define _RB_RDIR					((__uintptr_t)1U)
@@ -191,7 +189,7 @@ _RB_STACK_CLEAR(head);				\
 _RB_GET_CHILD(elm, dir, field) = (celm);			\
 } while (0)
 #define _RB_REPLACE_CHILD(elm, dir, oelm, nelm, field)	do {	\
-_RB_BITS(_RB_GET_CHILD(elm, dir, field)) ^= _RB_BITS(oelm) ^ _RB_BITS(nelm);	\
+_RB_GET_CHILD(elm, dir, field) = (__typeof(elm))(((uintptr_t)_RB_GET_CHILD(elm, dir, field)) ^ ((uintptr_t)oelm) ^ ((uintptr_t)nelm));	\
 } while (0)
 #define _RB_SWAP_CHILD_OR_ROOT(head, elm, oelm, nelm, field)	do {	\
 if (elm == NULL)							\
@@ -200,19 +198,15 @@ else									\
 	_RB_REPLACE_CHILD(elm, (RB_LEFT(elm, field) == (oelm) ? _RB_LDIR : _RB_RDIR), oelm, nelm, field);	\
 } while (0)
 
-#define _RB_GET_RDIFF(elm, dir, field)			(_RB_BITS(_RB_GET_CHILD(elm, dir, field)) & 1U)
+#define _RB_GET_RDIFF(elm, dir, field)			(((uintptr_t)_RB_GET_CHILD(elm, dir, field)) & 1U)
 #define _RB_FLIP_RDIFF(elm, dir, field)			do {	\
-_RB_BITS(_RB_GET_CHILD(elm, dir, field)) ^= 1U;			\
-} while (0)
-#define _RB_SET_RDIFF(elm, dir, rdiff, field)		do {	\
-_RB_ASSERT(rdiff == 0 || rdiff == 1);				\
-_RB_BITS(_RB_GET_CHILD(elm, dir, field)) = (_RB_BITS(_RB_GET_CHILD(elm, dir, field)) & ~_RB_LOWMASK) | (rdiff);	\
+_RB_GET_CHILD(elm, dir, field) = (__typeof(elm))(((uintptr_t)_RB_GET_CHILD(elm, dir, field)) ^ 1U);	\
 } while (0)
 #define _RB_SET_RDIFF0(elm, dir, field)			do {	\
-_RB_BITS(_RB_GET_CHILD(elm, dir, field)) &= ~_RB_LOWMASK;	\
+_RB_GET_CHILD(elm, dir, field) = (__typeof(elm))(((uintptr_t)_RB_GET_CHILD(elm, dir, field)) & ~_RB_LOWMASK);	\
 } while (0)
 #define _RB_SET_RDIFF1(elm, dir, field)			do {	\
-_RB_BITS(_RB_GET_CHILD(elm, dir, field)) |= 1U;		\
+_RB_GET_CHILD(elm, dir, field) = (__typeof(elm))(((uintptr_t)_RB_GET_CHILD(elm, dir, field)) | 1U);		\
 } while (0)
 
 
