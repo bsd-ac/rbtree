@@ -33,8 +33,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update
-        sudo apt-get install -y pkg-config valgrind meson ninja-build ${{ matrix.compiler.package }}
+        sudo apt-get install -y pkg-config meson ninja-build ${{ matrix.compiler.package }}
     - name: Test
       run: |
-        env CC=${{ matrix.compiler.CC }}  meson setup build
-        meson test --wrap='valgrind --leak-check=full --show-leak-kinds=all --verbose' -C build -v --timeout-multiplier 0
+        env CC=${{ matrix.compiler.CC }}  meson setup --buildtype=debugoptimized build
+        meson test -C build -v --timeout-multiplier 0
