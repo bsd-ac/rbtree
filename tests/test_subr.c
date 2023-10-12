@@ -57,9 +57,9 @@ struct node;
 static int compare(const void *, const void *);
 static void mix_operations(int *, int, struct node *, int, int, int, int);
 
-static int tree_augment(struct rb_tree *, struct node *);
+static int tree_augment(struct rb_tree *, void *);
 
-static void print_helper(const struct node *, int);
+//static void print_helper(const struct node *, int);
 static void print_tree(const struct node *);
 
 /* definitions */
@@ -252,16 +252,16 @@ main()
 	TDEBUGF("done sequential insertions in: %lld.%09ld s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 
 
-	print_tree(&root);
+	//print_tree(&root);
 
 	TDEBUGF("doing find and remove in random order");
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 	tmp = malloc(sizeof(struct node));
 	for(i = 0; i < ITER; i++) {
 //		if (i % RANK_TEST_ITERATIONS == 0)
-			TDEBUGF("removal %d: %d", i, perm[i]);
-		TDEBUGF("rank = %d", rb_rank(&root));
-		print_tree(&root);
+//			TDEBUGF("removal %d: %d", i, perm[i]);
+		//TDEBUGF("rank = %d", rb_rank(&root));
+		//print_tree(&root);
 		tmp->key = perm[i];
 		ins = rb_find(&root, tmp);
 		if (ins == NULL) {
@@ -270,9 +270,9 @@ main()
 		if (rb_remove(&root, ins) == NULL)
 			errx(1, "rb_remove failed: %d", i);
 //		if (i % RANK_TEST_ITERATIONS == 0) {
-		TDEBUGF("======");
-		print_tree(&root);
-		TDEBUGF("======");
+		//TDEBUGF("======");
+		//print_tree(&root);
+		//TDEBUGF("======");
 			rank = rb_rank(&root);
 			if (rank == -2)
 				errx(1, "rank error");
@@ -807,7 +807,7 @@ compare(const void *a, const void *b)
 	struct node *nb = (struct node *)b;
 	return na->key - nb->key;
 }
-
+/**
 static void
 print_helper(const struct node *n, int indent)
 {
@@ -817,16 +817,17 @@ print_helper(const struct node *n, int indent)
 	if (rb_left(&root, n))
   		print_helper((struct node *)rb_left(&root, n), indent + 4);
 }
-
+*/
 static void
 print_tree(const struct node *t)
 {
-	if (rb_root(t)) print_helper(rb_root(t), 0);
+	//if (rb_root(t)) print_helper(rb_root(t), 0);
 }
 
 static int
-tree_augment(struct rb_tree *rbt, struct node *elm)
+tree_augment(struct rb_tree *rbt, void *velm)
 {
+	struct node *elm = (struct node *)velm;
 	size_t newsize = 1, newheight = 0;
 	struct node *l, *r;
 	if ((l = (struct node *)rb_left(rbt, elm)) != NULL) {

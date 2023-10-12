@@ -46,10 +46,6 @@
 #include <stdio.h>
 #include <assert.h>
 
-#ifndef __uintptr_t
-#define __uintptr_t unsigned long long
-#endif
-
 /*
  * Debug macros
  */
@@ -62,12 +58,11 @@
 /*
  * internal use macros
  */
-#define _RBT_LOWMASK		((__uintptr_t)3U)
-#define _RBT_PTR(elm)		(__typeof(elm))((__uintptr_t)(elm) & ~_RBT_LOWMASK)
-#define _RBT_BITS(elm)		(*(__uintptr_t *)&elm)
+#define _RBT_LOWMASK		((uintptr_t)3U)
+#define _RBT_PTR(elm)		(__typeof(elm))((uintptr_t)(elm) & ~_RBT_LOWMASK)
 
-#define _RBT_LDIR		((__uintptr_t)0U)
-#define _RBT_RDIR		((__uintptr_t)1U)
+#define _RBT_LDIR		((uintptr_t)0U)
+#define _RBT_RDIR		((uintptr_t)1U)
 #define _RBT_ODIR(dir)		((dir) ^ 1U)
 
 
@@ -109,7 +104,7 @@ _RBT_STACK_PUSH(head, NULL);			\
 
 #else
 
-#define _RBT_PDIR			((__uintptr_t)2U)
+#define _RBT_PDIR			((uintptr_t)2U)
 
 #define _RBT_GET_PARENT(elm, pelm)	do {	\
 pelm = _RBT_GET_CHILD(elm, _RBT_PDIR);			\
@@ -139,7 +134,7 @@ _RBT_SET_CHILD(elm, _RBT_PDIR, pelm);		\
 _RBT_GET_CHILD(elm, dir) = (celm);				\
 } while (0)
 #define _RBT_REPLACE_CHILD(elm, dir, oelm, nelm) do {		\
-_RBT_BITS(_RBT_GET_CHILD(elm, dir)) ^= _RBT_BITS(oelm) ^ _RBT_BITS(nelm);	\
+_RBT_GET_CHILD(elm, dir) = (struct rb_tree *)(((uintptr_t)_RBT_GET_CHILD(elm, dir)) ^ ((uintptr_t)oelm) ^ ((uintptr_t)nelm));	\
 } while (0)
 #define _RBT_SWAP_CHILD_OR_ROOT(rbt, elm, oelm, nelm) do {	\
 if (elm == NULL)						\
@@ -148,15 +143,15 @@ else								\
 	_RBT_REPLACE_CHILD(elm, (_RBT_LEFT(elm) == (oelm) ? _RBT_LDIR : _RBT_RDIR), oelm, nelm);	\
 } while (0)
 
-#define _RBT_GET_RDIFF(elm, dir)				(_RBT_BITS(_RBT_GET_CHILD(elm, dir)) & 1U)
+#define _RBT_GET_RDIFF(elm, dir)				(((uintptr_t)_RBT_GET_CHILD(elm, dir)) & 1U)
 #define _RBT_FLIP_RDIFF(elm, dir) do {				\
-_RBT_BITS(_RBT_GET_CHILD(elm, dir)) ^= 1U;			\
+_RBT_GET_CHILD(elm, dir) = (struct rb_tree *)(((uintptr_t)_RBT_GET_CHILD(elm, dir)) ^ 1U);					\
 } while (0)
 #define _RBT_SET_RDIFF0(elm, dir) do {				\
-_RBT_BITS(_RBT_GET_CHILD(elm, dir)) &= ~_RBT_LOWMASK;		\
+_RBT_GET_CHILD(elm, dir) = (struct rb_tree *)(((uintptr_t)_RBT_GET_CHILD(elm, dir)) &~_RBT_LOWMASK);		\
 } while (0)
 #define _RBT_SET_RDIFF1(elm, dir) do {				\
-_RBT_BITS(_RBT_GET_CHILD(elm, dir)) |= 1U;			\
+_RBT_GET_CHILD(elm, dir) = (struct rb_tree *)(((uintptr_t)_RBT_GET_CHILD(elm, dir)) | 1U);			\
 } while (0)
 
 
@@ -517,7 +512,7 @@ _rb_insert_balance(struct rb_tree *rbt, struct rb_entry *parent,
     struct rb_entry *elm)
 {
 	struct rb_entry *child, *gpar;
-	__uintptr_t elmdir, sibdir;
+	uintptr_t elmdir, sibdir;
 
 	child = NULL;
 	gpar = NULL;
@@ -570,7 +565,7 @@ _rb_insert_balance(struct rb_tree *rbt, struct rb_entry *parent,
 
 static inline struct rb_entry *
 _rb_insert_finish(struct rb_tree *rbt, struct rb_entry *parent, 
-    __uintptr_t insdir, struct rb_entry *elm)
+    uintptr_t insdir, struct rb_entry *elm)
 {
 	struct rb_entry *tmp = elm;
 	_RBT_SET_PARENT(elm, parent);
@@ -595,7 +590,7 @@ _rb_insert(struct rb_tree *rbt, struct rb_entry *elm)
 {
 	struct rb_entry *parent, *tmp;
 	int comp;
-	__uintptr_t insdir;
+	uintptr_t insdir;
 
 	_RBT_STACK_CLEAR(rbt);
 	_RBT_SET_CHILD(elm, _RBT_LDIR, NULL);
@@ -641,7 +636,7 @@ _rb_insert_next(struct rb_tree *rbt, struct rb_entry *elm,
     struct rb_entry *next)
 {
 	struct rb_entry *tmp;
-	__uintptr_t insdir = _RBT_RDIR;
+	uintptr_t insdir = _RBT_RDIR;
 	_RBT_SET_CHILD(next, _RBT_LDIR, NULL);
 	_RBT_SET_CHILD(next, _RBT_RDIR, NULL);
 
@@ -659,7 +654,7 @@ _rb_insert_prev(struct rb_tree *rbt, struct rb_entry *elm,
     struct rb_entry *prev)
 {
 	struct rb_entry *tmp;
-	__uintptr_t insdir = _RBT_LDIR;
+	uintptr_t insdir = _RBT_LDIR;
 	_RBT_SET_CHILD(prev, _RBT_LDIR, NULL);
 	_RBT_SET_CHILD(prev, _RBT_RDIR, NULL);
 
@@ -760,15 +755,14 @@ _rb_remove_balance(struct rb_tree *rbt,
     struct rb_entry *parent, struct rb_entry *elm)
 {
 	struct rb_entry *gpar, *sibling, *tmp1 = NULL, *tmp2 = NULL;
-	__uintptr_t sibdir, ssdiff, sodiff;
-	volatile __uintptr_t elmdir;
+	uintptr_t sibdir, ssdiff, sodiff;
+	volatile uintptr_t elmdir;
 	int extend;
 
 	_RBT_ASSERT(parent != NULL);
 	gpar = NULL;
 	sibling = NULL;
 	if (_RBT_RIGHT(parent) == NULL && _RBT_LEFT(parent) == NULL) {
-		fprintf(stderr, "case XXX - parent = %p\n", parent);
 		_RBT_SET_CHILD(parent, _RBT_LDIR, NULL);
 		_RBT_SET_CHILD(parent, _RBT_RDIR, NULL);
 		elm = parent;
@@ -783,11 +777,6 @@ _rb_remove_balance(struct rb_tree *rbt,
 		assert(parent != NULL);
 		_RBT_STACK_POP(rbt, gpar);
 		_RBT_GET_PARENT(parent, gpar);
-		// fprintf(stderr, "parent = %p\n", parent);
-		// fprintf(stderr, "elmdir = %llu\n", elmdir);
-		// fprintf(stderr, "elm = %p\n", (void *)elm);
-		// fprintf(stderr, "left child = %p\n", _RBT_LEFT(parent));
-		// fprintf(stderr, "right child = %p\n", _RBT_RIGHT(parent));
 		tmp1 = _RBT_LEFT(parent);
 		tmp2 = _RBT_RIGHT(parent);
 		if (tmp1 == elm)
@@ -808,17 +797,7 @@ _rb_remove_balance(struct rb_tree *rbt,
 		elmdir = (elm == (_RBT_LEFT(parent))) ? _RBT_LDIR : _RBT_RDIR;
 		if (_RBT_GET_RDIFF(parent, elmdir) == 0) {
 			/* case (1) */
-			fprintf(stderr, "case 1\n");
-			fprintf(stderr, "parent = %p\n", parent);
-			fprintf(stderr, "elm = %p\n", elm);
-			fprintf(stderr, "elmdir = %ul\n", elmdir);
-			fprintf(stderr, "left child = %p\n", _RBT_LEFT(parent));
-			fprintf(stderr, "right child = %p\n", _RBT_RIGHT(parent));
-			if (_RBT_LEFT(parent) == elm) {
-				fprintf(stderr, "it is left child\n");
-			}
 			_RBT_FLIP_RDIFF(parent, elmdir);
-			fprintf(stderr, "rdiff = %d\n", _RBT_GET_RDIFF(parent, elmdir));
 			_RBT_STACK_PUSH(rbt, gpar);
 			return (parent);
 		}
@@ -826,7 +805,6 @@ _rb_remove_balance(struct rb_tree *rbt,
 		sibdir = _RBT_ODIR(elmdir);
 		if (_RBT_GET_RDIFF(parent, sibdir)) {
 			/* case 2.1 */
-			fprintf(stderr, "case 2.1\n");
 			_RBT_FLIP_RDIFF(parent, sibdir);
 			_rb_augment_try(rbt, parent);
 			continue;
@@ -838,7 +816,6 @@ _rb_remove_balance(struct rb_tree *rbt,
 		sodiff = _RBT_GET_RDIFF(sibling, sibdir);
 		if (ssdiff && sodiff) {
 			/* case 2.2a */
-			fprintf(stderr, "case 2.2a\n");
 			_RBT_FLIP_RDIFF(sibling, elmdir);
 			_RBT_FLIP_RDIFF(sibling, sibdir);
 			_rb_augment_try(rbt, parent);
@@ -847,7 +824,6 @@ _rb_remove_balance(struct rb_tree *rbt,
 		extend = 0;
 		if (sodiff) {
 			/* case 2.2c */
-			fprintf(stderr, "case 2.2c\n");
 			_RBT_FLIP_RDIFF(sibling, sibdir);
 			_RBT_FLIP_RDIFF(parent, elmdir);
 			elm = _RBT_PTR(_RBT_GET_CHILD(sibling, elmdir));
@@ -856,7 +832,6 @@ _rb_remove_balance(struct rb_tree *rbt,
 			extend = 1;
 		} else {
 			/* case 2.2b */
-			fprintf(stderr, "case 2.2b\n");
 			_RBT_FLIP_RDIFF(sibling, sibdir);
 			if (ssdiff) {
 				_RBT_FLIP_RDIFF(sibling, elmdir);
@@ -1059,7 +1034,7 @@ rb_parent(struct rb_tree *rbt, void *node)
 }
 
 static inline void
-_rb_set_child(struct rb_tree *rbt, void *node, __uintptr_t dir, void *child)
+_rb_set_child(struct rb_tree *rbt, void *node, uintptr_t dir, void *child)
 {
 	struct rb_entry *elm = _rb_n2e(rbt->options, node);
 	struct rb_entry *c = _rb_n2e(rbt->options, child);
