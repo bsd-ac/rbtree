@@ -12,7 +12,7 @@ on:
 
 jobs:
   ci:
-    runs-on: ubuntu-23.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         compiler:
@@ -22,16 +22,12 @@ jobs:
             CC: gcc-11
           - package: gcc-12
             CC: gcc-12
-          - package: gcc-13
-            CC: gcc-13
           - package: clang-13
             CC: clang-13
           - package: clang-14
             CC: clang-14
           - package: clang-15
             CC: clang-15
-          - package: clang-16
-            CC: clang-16
     steps:
     - uses: actions/checkout@v3
     - name: Install dependencies
