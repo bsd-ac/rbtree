@@ -80,7 +80,7 @@
 #define _RB_LOWMASK					((__uintptr_t)3U)
 #define _RB_PTR(elm)					(__typeof(elm))((__uintptr_t)(elm) & ~_RB_LOWMASK)
 /* this is used for converting a struct type * to a __uintptr_t and can also be used as an lvalue */
-#define _RB_BITS(elm)					(*(__uintptr_t *)&elm)
+#define _RB_BITS(elm)					(*(__uintptr_t *)((char *)&elm))
 
 #define _RB_LDIR					((__uintptr_t)0U)
 #define _RB_RDIR					((__uintptr_t)1U)

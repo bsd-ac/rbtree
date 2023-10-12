@@ -43,9 +43,11 @@
  */
 
 #include "rbtree.h"
+#include <stdio.h>
+#include <assert.h>
 
 #ifndef __uintptr_t
-#define __uintptr_t uintptr_t
+#define __uintptr_t unsigned long long
 #endif
 
 /*
@@ -160,8 +162,20 @@ _RBT_BITS(_RBT_GET_CHILD(elm, dir)) |= 1U;			\
 
 #define _RBT_ROOT(rbt)		(rbt)->root
 #define _RBT_EMPTY(rbt)		(_RBT_ROOT(rbt) == NULL)
-#define _RBT_LEFT(elm)		_RBT_PTR(_RBT_GET_CHILD(elm, _RBT_LDIR))
-#define _RBT_RIGHT(elm)		_RBT_PTR(_RBT_GET_CHILD(elm, _RBT_RDIR))
+//#define _RBT_LEFT(elm)		_RBT_PTR(_RBT_GET_CHILD(elm, _RBT_LDIR))
+//#define _RBT_RIGHT(elm)		_RBT_PTR(_RBT_GET_CHILD(elm, _RBT_RDIR))
+
+struct rb_entry *
+_RBT_LEFT(struct rb_entry *elm)
+{
+	return _RBT_PTR(_RBT_GET_CHILD(elm, _RBT_LDIR));
+}
+
+struct rb_entry *
+_RBT_RIGHT(struct rb_entry *elm)
+{
+	return _RBT_PTR(_RBT_GET_CHILD(elm, _RBT_RDIR));
+}
 
 
 /*
@@ -246,13 +260,13 @@ _rb_rank(struct rb_entry *elm)
 	if (elm == NULL)
 		return (-1);
 	lrank =  _rb_rank(_RBT_LEFT(elm));
-	if (lrank == -2)
-		return (-2);
+	if (lrank < -2)
+		return (-4);
 	rrank =  _rb_rank(_RBT_RIGHT(elm));
-	if (rrank == -2)
-		return (-2);
-	lrank += (_RBT_GET_RDIFF(elm, _RBT_LDIR) == 1) ? 2 : 1;
-	rrank += (_RBT_GET_RDIFF(elm, _RBT_RDIR) == 1) ? 2 : 1;
+	if (rrank < -2)
+		return (-8);
+	lrank += (_RBT_GET_RDIFF(elm, _RBT_LDIR) == 1U) ? 2 : 1;
+	rrank += (_RBT_GET_RDIFF(elm, _RBT_RDIR) == 1U) ? 2 : 1;
 	if (lrank != rrank)
 		return (-2);
 	return (lrank);
@@ -262,6 +276,19 @@ int
 rb_rank(struct rb_tree *rbt)
 {
 	return (_rb_rank(_RBT_ROOT(rbt)));
+}
+
+int rb_rank_node(struct rb_tree *rbt, void *node)
+{
+	struct rb_entry *elm = _rb_n2e(rbt->options, node);
+	return (_rb_rank(elm));
+}
+
+int
+rb_rank_diff(struct rb_tree *rbt, void *node, int dir)
+{
+	struct rb_entry *elm = _rb_n2e(rbt->options, node);
+	return (_RBT_GET_RDIFF(elm, dir));
 }
 
 void *
@@ -732,14 +759,16 @@ static inline struct rb_entry *
 _rb_remove_balance(struct rb_tree *rbt,
     struct rb_entry *parent, struct rb_entry *elm)
 {
-	struct rb_entry *gpar, *sibling;
-	__uintptr_t elmdir, sibdir, ssdiff, sodiff;
+	struct rb_entry *gpar, *sibling, *tmp1 = NULL, *tmp2 = NULL;
+	__uintptr_t sibdir, ssdiff, sodiff;
+	volatile __uintptr_t elmdir;
 	int extend;
 
 	_RBT_ASSERT(parent != NULL);
 	gpar = NULL;
 	sibling = NULL;
 	if (_RBT_RIGHT(parent) == NULL && _RBT_LEFT(parent) == NULL) {
+		fprintf(stderr, "case XXX - parent = %p\n", parent);
 		_RBT_SET_CHILD(parent, _RBT_LDIR, NULL);
 		_RBT_SET_CHILD(parent, _RBT_RDIR, NULL);
 		elm = parent;
@@ -751,13 +780,45 @@ _rb_remove_balance(struct rb_tree *rbt,
 		}
 	}
 	do {
-		_RBT_ASSERT(parent != NULL);
+		assert(parent != NULL);
 		_RBT_STACK_POP(rbt, gpar);
 		_RBT_GET_PARENT(parent, gpar);
-		elmdir = _RBT_LEFT(parent) == elm ? _RBT_LDIR : _RBT_RDIR;
+		// fprintf(stderr, "parent = %p\n", parent);
+		// fprintf(stderr, "elmdir = %llu\n", elmdir);
+		// fprintf(stderr, "elm = %p\n", (void *)elm);
+		// fprintf(stderr, "left child = %p\n", _RBT_LEFT(parent));
+		// fprintf(stderr, "right child = %p\n", _RBT_RIGHT(parent));
+		tmp1 = _RBT_LEFT(parent);
+		tmp2 = _RBT_RIGHT(parent);
+		if (tmp1 == elm)
+			elmdir = _RBT_LDIR;
+		else if (tmp2 == elm)
+			elmdir = _RBT_RDIR;
+		else
+			assert(0);
+		tmp1 = _RBT_LEFT(parent);
+		tmp2 = _RBT_RIGHT(parent);
+		if (tmp1 == elm)
+			elmdir = _RBT_LDIR;
+		else if (tmp2 == elm)
+			elmdir = _RBT_RDIR;
+		else
+			assert(0);
+		//_RBT_GET_RDIFF(parent, elmdir);
+		elmdir = (elm == (_RBT_LEFT(parent))) ? _RBT_LDIR : _RBT_RDIR;
 		if (_RBT_GET_RDIFF(parent, elmdir) == 0) {
 			/* case (1) */
+			fprintf(stderr, "case 1\n");
+			fprintf(stderr, "parent = %p\n", parent);
+			fprintf(stderr, "elm = %p\n", elm);
+			fprintf(stderr, "elmdir = %ul\n", elmdir);
+			fprintf(stderr, "left child = %p\n", _RBT_LEFT(parent));
+			fprintf(stderr, "right child = %p\n", _RBT_RIGHT(parent));
+			if (_RBT_LEFT(parent) == elm) {
+				fprintf(stderr, "it is left child\n");
+			}
 			_RBT_FLIP_RDIFF(parent, elmdir);
+			fprintf(stderr, "rdiff = %d\n", _RBT_GET_RDIFF(parent, elmdir));
 			_RBT_STACK_PUSH(rbt, gpar);
 			return (parent);
 		}
@@ -765,6 +826,7 @@ _rb_remove_balance(struct rb_tree *rbt,
 		sibdir = _RBT_ODIR(elmdir);
 		if (_RBT_GET_RDIFF(parent, sibdir)) {
 			/* case 2.1 */
+			fprintf(stderr, "case 2.1\n");
 			_RBT_FLIP_RDIFF(parent, sibdir);
 			_rb_augment_try(rbt, parent);
 			continue;
@@ -776,6 +838,7 @@ _rb_remove_balance(struct rb_tree *rbt,
 		sodiff = _RBT_GET_RDIFF(sibling, sibdir);
 		if (ssdiff && sodiff) {
 			/* case 2.2a */
+			fprintf(stderr, "case 2.2a\n");
 			_RBT_FLIP_RDIFF(sibling, elmdir);
 			_RBT_FLIP_RDIFF(sibling, sibdir);
 			_rb_augment_try(rbt, parent);
@@ -784,6 +847,7 @@ _rb_remove_balance(struct rb_tree *rbt,
 		extend = 0;
 		if (sodiff) {
 			/* case 2.2c */
+			fprintf(stderr, "case 2.2c\n");
 			_RBT_FLIP_RDIFF(sibling, sibdir);
 			_RBT_FLIP_RDIFF(parent, elmdir);
 			elm = _RBT_PTR(_RBT_GET_CHILD(sibling, elmdir));
@@ -792,6 +856,7 @@ _rb_remove_balance(struct rb_tree *rbt,
 			extend = 1;
 		} else {
 			/* case 2.2b */
+			fprintf(stderr, "case 2.2b\n");
 			_RBT_FLIP_RDIFF(sibling, sibdir);
 			if (ssdiff) {
 				_RBT_FLIP_RDIFF(sibling, elmdir);

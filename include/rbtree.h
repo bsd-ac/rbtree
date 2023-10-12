@@ -84,6 +84,8 @@ struct _name {								\
 void	 rb_init(struct rb_tree *);
 int	 rb_empty(struct rb_tree *);
 int 	 rb_rank(struct rb_tree *);
+int	 rb_rank_node(struct rb_tree *, void *);
+int	 rb_rank_diff(struct rb_tree *, void *, int);
 void	*rb_root(struct rb_tree *);
 void	*rb_min(struct rb_tree *);
 void	*rb_max(struct rb_tree *);
