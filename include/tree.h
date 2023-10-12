@@ -59,10 +59,7 @@
  * The convention used here is the rank difference = 1 + last bit.
  */
 
-
-#ifndef __uintptr_t
-#define __uintptr_t uintptr_t
-#endif
+#include <stdint.h>
 
 /*
  * debug macros
@@ -77,11 +74,11 @@
 /* 
  * internal use macros
  */
-#define _RB_LOWMASK					((__uintptr_t)3U)
-#define _RB_PTR(elm)					(__typeof(elm))((__uintptr_t)(elm) & ~_RB_LOWMASK)
+#define _RB_LOWMASK					((uintptr_t)3U)
+#define _RB_PTR(elm)					(__typeof(elm))((uintptr_t)(elm) & ~_RB_LOWMASK)
 
-#define _RB_LDIR					((__uintptr_t)0U)
-#define _RB_RDIR					((__uintptr_t)1U)
+#define _RB_LDIR					((uintptr_t)0U)
+#define _RB_RDIR					((uintptr_t)1U)
 #define _RB_ODIR(dir)					((dir) ^ 1U)
 
 #ifndef RB_MAX_HEIGHT
@@ -340,7 +337,7 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,		\
     struct type *elm)								\
 {										\
 	struct type *child, *gpar;						\
-	__uintptr_t elmdir, sibdir;						\
+	uintptr_t elmdir, sibdir;						\
 										\
 	child = NULL;								\
 	gpar = NULL;								\
@@ -393,7 +390,7 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,		\
 /* Inserts a node into the RB tree */						\
 attr struct type *								\
 name##_RB_INSERT_FINISH(struct name *head, struct type *parent,			\
-    __uintptr_t insdir, struct type *elm)					\
+    uintptr_t insdir, struct type *elm)					\
 {										\
 	struct type *tmp = elm;							\
 	_RB_SET_PARENT(elm, parent, field);					\
@@ -416,7 +413,7 @@ name##_RB_INSERT(struct name *head, struct type *elm)				\
 {										\
 	struct type *parent, *tmp;						\
 	__typeof(cmp(NULL, NULL)) comp;						\
-	__uintptr_t insdir;							\
+	uintptr_t insdir;							\
 										\
 	_RB_STACK_CLEAR(head);							\
 	_RB_SET_CHILD(elm, _RB_LDIR, NULL, field);				\
@@ -456,7 +453,7 @@ attr struct type *								\
 name##_RB_INSERT_NEXT(struct name *head, struct type *elm, struct type *next)	\
 {										\
 	struct type *tmp;							\
-	__uintptr_t insdir = _RB_RDIR;						\
+	uintptr_t insdir = _RB_RDIR;						\
 	_RB_SET_CHILD(next, _RB_LDIR, NULL, field);				\
 	_RB_SET_CHILD(next, _RB_RDIR, NULL, field);				\
 	_RB_ASSERT((cmp)(elm, next) < 0);					\
@@ -476,7 +473,7 @@ attr struct type *								\
 name##_RB_INSERT_PREV(struct name *head, struct type *elm, struct type *prev)	\
 {										\
 	struct type *tmp;							\
-	__uintptr_t insdir = _RB_LDIR;						\
+	uintptr_t insdir = _RB_LDIR;						\
 	_RB_SET_CHILD(prev, _RB_LDIR, NULL, field);				\
 	_RB_SET_CHILD(prev, _RB_RDIR, NULL, field);				\
 	_RB_ASSERT((cmp)(elm, prev) > 0);					\
@@ -736,7 +733,7 @@ name##_RB_REMOVE_BALANCE(struct name *head, struct type *parent,		\
     struct type *elm)								\
 {										\
 	struct type *gpar, *sibling;						\
-	__uintptr_t elmdir, sibdir, ssdiff, sodiff;				\
+	uintptr_t elmdir, sibdir, ssdiff, sodiff;				\
 	int extend;								\
 										\
 	_RB_ASSERT(parent != NULL);						\
