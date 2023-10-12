@@ -71,43 +71,43 @@
 #define _RBT_GET_PARENT(elm, oelm)		do {} while (0)
 #define _RBT_SET_PARENT(elm, pelm)		do {} while (0)
 
-#define _RBT_STACK_SIZE(head, sz)	do {	\
+#define _RBT_STACK_SIZE(head, sz)do {		\
 *sz = (head)->top;				\
 } while (0)
 
-#define _RBT_STACK_PUSH(head, elm)	do {	\
+#define _RBT_STACK_PUSH(head, elm) do {		\
 (head)->stack[(head)->top++] = elm;		\
 } while (0)
 
-#define _RBT_STACK_DROP(head)		do {	\
+#define _RBT_STACK_DROP(head) do {		\
 (head)->top -= 1;				\
 } while (0)
 
-#define _RBT_STACK_POP(head, oelm)	do {	\
+#define _RBT_STACK_POP(head, oelm) do {		\
 if ((head)->top > 0)				\
 	oelm = (head)->stack[--(head)->top];	\
 } while (0)
 
-#define _RBT_STACK_TOP(head, oelm)	do {	\
+#define _RBT_STACK_TOP(head, oelm) do {		\
 if ((head)->top > 0)				\
 	oelm = (head)->stack[(head)->top - 1];	\
 } while (0)
 
-#define _RBT_STACK_CLEAR(head)		do {	\
+#define _RBT_STACK_CLEAR(head) do {		\
 (head)->top = 0;				\
 _RBT_STACK_PUSH(head, NULL);			\
 } while (0)
 
-#define _RBT_STACK_SET(head, i, elm)	do {	\
+#define _RBT_STACK_SET(head, i, elm) do {	\
 (head)->stack[i] = elm;				\
 } while (0)
 
 #else
 
-#define _RBT_PDIR			((uintptr_t)2U)
+#define _RBT_PDIR				((uintptr_t)2U)
 
-#define _RBT_GET_PARENT(elm, pelm)	do {	\
-pelm = _RBT_GET_CHILD(elm, _RBT_PDIR);			\
+#define _RBT_GET_PARENT(elm, pelm) do {		\
+pelm = _RBT_GET_CHILD(elm, _RBT_PDIR);		\
 } while (0)
 
 #define _RBT_SET_PARENT(elm, pelm) do {		\
@@ -157,20 +157,8 @@ _RBT_GET_CHILD(elm, dir) = (struct rb_tree *)(((uintptr_t)_RBT_GET_CHILD(elm, di
 
 #define _RBT_ROOT(rbt)		(rbt)->root
 #define _RBT_EMPTY(rbt)		(_RBT_ROOT(rbt) == NULL)
-//#define _RBT_LEFT(elm)		_RBT_PTR(_RBT_GET_CHILD(elm, _RBT_LDIR))
-//#define _RBT_RIGHT(elm)		_RBT_PTR(_RBT_GET_CHILD(elm, _RBT_RDIR))
-
-struct rb_entry *
-_RBT_LEFT(struct rb_entry *elm)
-{
-	return _RBT_PTR(_RBT_GET_CHILD(elm, _RBT_LDIR));
-}
-
-struct rb_entry *
-_RBT_RIGHT(struct rb_entry *elm)
-{
-	return _RBT_PTR(_RBT_GET_CHILD(elm, _RBT_RDIR));
-}
+#define _RBT_LEFT(elm)		_RBT_PTR(_RBT_GET_CHILD(elm, _RBT_LDIR))
+#define _RBT_RIGHT(elm)		_RBT_PTR(_RBT_GET_CHILD(elm, _RBT_RDIR))
 
 
 /*

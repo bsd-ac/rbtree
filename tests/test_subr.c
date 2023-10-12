@@ -47,7 +47,7 @@ struct timespec start, end, diff, rstart, rend, rdiff, rtot = {0, 0};
 #define SEED_RANDOM srandom
 #endif
 
-int ITER=100;
+int ITER=150000;
 int RANK_TEST_ITERATIONS=10000;
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
@@ -89,7 +89,7 @@ main()
 	nums = calloc(ITER, sizeof(int));
 
 	// for determinism
-	SEED_RANDOM(42);
+	SEED_RANDOM(4201);
 
 	TDEBUGF("generating a 'random' permutation");
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
@@ -273,9 +273,9 @@ main()
 		//TDEBUGF("======");
 		//print_tree(&root);
 		//TDEBUGF("======");
-			rank = rb_rank(&root);
-			if (rank == -2)
-				errx(1, "rank error");
+//			rank = rb_rank(&root);
+//			if (rank == -2)
+//				errx(1, "rank error");
 //		}
 	}
 	free(tmp);

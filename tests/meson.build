@@ -23,5 +23,8 @@ foreach ts : test_sources
 	benchmark('native-3ptr-augment-' + ts, t_3ptr_aug)
 endforeach
 
-test_subr = executable('test_subr', ['test_subr.c', 'subr_tree.c'], include_directories : incdir)
-test('test_subr', test_subr)
+test_subr_2ptr = executable('test_subr_2ptr', ['test_subr.c', 'subr_tree.c'], c_args : ['-DRBT_SMALL'], include_directories : incdir)
+test('native-subr-2ptr', test_subr_2ptr)
+
+test_subr_3ptr = executable('test_subr_3ptr', ['test_subr.c', 'subr_tree.c'], include_directories : incdir)
+test('native-subr-3ptr', test_subr_3ptr)
