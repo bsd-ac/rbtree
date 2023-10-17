@@ -6,8 +6,6 @@ project('rbtree', 'c',
 	]
 )
 
-c       = meson.get_compiler('c')
-
 incdir = include_directories('include')
 
 freebsd = include_directories('freebsd')
