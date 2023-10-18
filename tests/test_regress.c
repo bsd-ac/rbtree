@@ -30,8 +30,8 @@ struct timespec start, end, diff, rstart, rend, rdiff, rtot = {0, 0};
 	} while (0)
 #endif
 
-#define RB_TEST_RANK
-#define RB_TEST_DIAGNOSTIC
+//#define RB_TEST_RANK
+//#define RB_TEST_DIAGNOSTIC
 //#define _RB_DIAGNOSTIC
 
 #ifdef DOAUGMENT
@@ -49,7 +49,7 @@ struct timespec start, end, diff, rstart, rend, rdiff, rtot = {0, 0};
 #define SEED_RANDOM srandom
 #endif
 
-int ITER=15;
+int ITER=1500000;
 int RANK_TEST_ITERATIONS=1;
 long long augment_count = 0;
 
@@ -124,12 +124,12 @@ main()
 		nums[i] = i;
 	}
 	
+	/*
 	fprintf(stderr, "{");
 	for(int i = 0; i < ITER; i++) {
 		fprintf(stderr, "%d, ", perm[i]);
 	}
 	fprintf(stderr, "}\n");
-	/*
 	int nperm[10] = {2, 4, 9, 7, 8, 3, 0, 1, 6, 5};
 	int nperm[6] = {2, 6, 1, 4, 5, 3};
 	int nperm[10] = {10, 3, 7, 8, 6, 1, 9, 2, 5, 4};
@@ -202,8 +202,8 @@ main()
 #endif
 
 #ifdef DOAUGMENT
-		//if (!(RB_EMPTY(&root)) && (RB_ROOT(&root))->size != ITER - 1 - i)
-			//errx(1, "RB_REMOVE size error");
+		if (!(RB_EMPTY(&root)) && (RB_ROOT(&root))->size != ITER - 1 - i)
+			errx(1, "RB_REMOVE size error");
 #endif
 
 	}
@@ -774,19 +774,19 @@ mix_operations(int *perm, int psize, struct node *nodes, int nsize, int insertio
 	assert(insertions + reads <= psize);
 
 	for(i = 0; i < insertions; i++) {
-                TDEBUGF("iteration %d", i);
+                //TDEBUGF("iteration %d", i);
 		tmp = &(nodes[i]);
 		if (tmp == NULL) err(1, "malloc");
 		tmp->size = 1;
 		tmp->height = 1;
 		tmp->key = perm[i];
-		TDEBUGF("inserting %d", tmp->key);
+		//TDEBUGF("inserting %d", tmp->key);
 		if (RB_INSERT(tree, &root, tmp) != NULL)
 			errx(1, "RB_INSERT failed");
                 //print_tree(&root);
 #if DOAUGMENT
                 //TDEBUGF("size = %zu", RB_ROOT(&root)->size);
-                //assert(RB_ROOT(&root)->size == i + 1);
+                assert(RB_ROOT(&root)->size == i + 1);
 #endif
 
 #ifdef RB_TEST_RANK

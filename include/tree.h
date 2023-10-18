@@ -113,6 +113,7 @@ _RB_GET_CHILD(elm, dir, field) = (celm);		\
 } while (0)
 #define _RB_UP(elm, field)				_RB_GET_CHILD(elm, _RB_PDIR, field)
 #define _RB_REPLACE_PARENT(elm, pelm, field)		_RB_SET_CHILD(elm, _RB_PDIR, pelm, field)
+#define _RB_COPY_PARENT(elm, nelm, field)		_RB_REPLACE_PARENT(nelm, _RB_UP(elm, field), field)
 #define _RB_SET_PARENT(elm, pelm, field) do {		\
 _RB_UP(elm, field) = (__typeof(elm))(((uintptr_t)pelm) | 	\
 	    (((uintptr_t)_RB_UP(elm, field)) & _RB_LOWMASK));	\
@@ -134,6 +135,8 @@ _RB_REPLACE_PARENT(elm, ((__typeof(elm))(((uintptr_t)_RB_UP(elm, field)) ^ _RB_L
 _RB_REPLACE_PARENT(elm, ((__typeof(elm))(((uintptr_t)_RB_UP(elm, field)) & ~dir)), field)
 #define _RB_SET_RDIFF1(elm, dir, field)			\
 _RB_REPLACE_PARENT(elm, ((__typeof(elm))(((uintptr_t)_RB_UP(elm, field)) | dir)), field)
+#define _RB_SET_RDIFF11(elm, field)			\
+_RB_REPLACE_PARENT(elm, ((__typeof(elm))(((uintptr_t)_RB_UP(elm, field)) | _RB_LDIR | _RB_RDIR)), field)
 #define _RB_SET_RDIFF00(elm, field)			\
 _RB_REPLACE_PARENT(elm, RB_PARENT(elm, field), field)
 
@@ -408,17 +411,13 @@ name##_RB_REMOVE_BALANCE(struct name *head, struct type *parent,	\
 {									\
 	struct type *gpar, *sibling;					\
 	uintptr_t elmdir, sibdir, ssdiff, sodiff;			\
-	int extend;							\
 									\
 	gpar = NULL;							\
 	sibling = NULL;							\
 	if (RB_RIGHT(parent, field) == NULL && RB_LEFT(parent, field) == NULL) {	\
-		_RB_SET_CHILD(parent, _RB_LDIR, NULL, field);		\
-		_RB_SET_CHILD(parent, _RB_RDIR, NULL, field);		\
+		_RB_SET_RDIFF00(parent, field);				\
 		elm = parent;						\
-		(void)RB_AUGMENT_CHECK(elm);				\
-		parent = RB_PARENT(parent, field);			\
-		if (parent == NULL) {					\
+		if ((parent = RB_PARENT(elm, field)) == NULL) {		\
 			return (NULL);					\
 		}							\
 	}								\
@@ -429,55 +428,47 @@ name##_RB_REMOVE_BALANCE(struct name *head, struct type *parent,	\
 		if (_RB_GET_RDIFF(parent, elmdir, field) == 0) {	\
 			/* case (1) */					\
 			_RB_FLIP_RDIFF(parent, elmdir, field);		\
-			return (parent);				\
+			return (NULL);					\
 		}							\
 		/* case 2 */						\
 		sibdir = _RB_ODIR(elmdir);				\
 		if (_RB_GET_RDIFF(parent, sibdir, field)) {		\
 			/* case 2.1 */					\
 			_RB_FLIP_RDIFF(parent, sibdir, field);		\
-			(void)RB_AUGMENT_CHECK(parent);			\
 			continue;					\
 		}							\
 		/* case 2.2 */						\
-		sibling = _RB_PTR(_RB_GET_CHILD(parent, sibdir, field));	\
+		sibling = _RB_GET_CHILD(parent, sibdir, field);		\
 		_RB_ASSERT(sibling != NULL);				\
 		ssdiff = _RB_GET_RDIFF(sibling, elmdir, field);		\
 		sodiff = _RB_GET_RDIFF(sibling, sibdir, field);		\
+		_RB_FLIP_RDIFF(sibling, sibdir, field);			\
 		if (ssdiff && sodiff) {					\
 			/* case 2.2a */					\
 			_RB_FLIP_RDIFF(sibling, elmdir, field);		\
-			_RB_FLIP_RDIFF(sibling, sibdir, field);		\
-			(void)RB_AUGMENT_CHECK(parent);			\
 			continue;					\
 		}							\
-		extend = 0;						\
 		if (sodiff) {						\
 			/* case 2.2c */					\
-			_RB_FLIP_RDIFF(sibling, sibdir, field);		\
-			_RB_FLIP_RDIFF(parent, elmdir, field);		\
-			elm = _RB_PTR(_RB_GET_CHILD(sibling, elmdir, field));	\
+			elm = _RB_GET_CHILD(sibling, elmdir, field);	\
 			_RB_ROTATE(sibling, elm, sibdir, field);	\
-			_RB_SET_RDIFF1(elm, sibdir, field);		\
-			extend = 1;					\
+			_RB_FLIP_RDIFF(parent, elmdir, field);		\
+			if (_RB_GET_RDIFF(elm, elmdir, field))		\
+				_RB_FLIP_RDIFF(parent, sibdir, field);	\
+			if (_RB_GET_RDIFF(elm, sibdir, field))		\
+				_RB_FLIP_RDIFF(sibling, elmdir, field);	\
+			_RB_SET_RDIFF11(elm, field);			\
 		} else {						\
 			/* case 2.2b */					\
-			_RB_FLIP_RDIFF(sibling, sibdir, field);		\
 			if (ssdiff) {					\
-				_RB_FLIP_RDIFF(sibling, elmdir, field);	\
-				_RB_FLIP_RDIFF(parent, elmdir, field);	\
-				extend = 1;				\
+				_RB_SET_RDIFF11(sibling, field);	\
+				_RB_SET_RDIFF00(parent, field);		\
 			}						\
-			_RB_FLIP_RDIFF(parent, sibdir, field);		\
 			elm = sibling;					\
 		}							\
 		_RB_ROTATE(parent, elm, elmdir, field);			\
 		_RB_SET_PARENT(elm, gpar, field);			\
 		_RB_SWAP_CHILD_OR_ROOT(head, gpar, parent, elm, field);	\
-		if (extend) {						\
-			_RB_SET_RDIFF1(elm, elmdir, field);		\
-		}							\
-		(void)RB_AUGMENT_CHECK(parent);				\
 		if (elm != sibling)					\
 			(void)RB_AUGMENT_CHECK(sibling);		\
 		return (elm);						\
@@ -490,12 +481,9 @@ name##_RB_REMOVE(struct name *head, struct type *elm)			\
 {									\
 	struct type *parent, *opar, *child, *rmin;			\
 									\
-	parent = NULL;							\
-									\
-	/* first find the element to swap with oelm */			\
-	child = _RB_GET_CHILD(elm, _RB_LDIR, field);			\
+	/* first find the element to swap with elm */			\
+	child = RB_LEFT(elm, field);					\
 	rmin = RB_RIGHT(elm, field);					\
-	opar = _RB_UP(elm, field);					\
 	if (rmin == NULL || child == NULL) {				\
 		rmin = child = (rmin == NULL ? child : rmin);		\
 		parent = opar = RB_PARENT(elm, field);			\
@@ -510,20 +498,28 @@ name##_RB_REMOVE(struct name *head, struct type *elm)			\
 		child = RB_RIGHT(rmin, field);				\
 		if (parent != rmin) {					\
 			_RB_SET_PARENT(parent, rmin, field);		\
-			_RB_SET_CHILD(rmin, _RB_RDIR, RB_RIGHT(elm, field), field);	\
+			_RB_SET_CHILD(rmin, _RB_RDIR, parent, field);	\
 			parent = RB_PARENT(rmin, field);		\
-			_RB_SET_CHILD(parent, _RB_LDIR, rmin, field);	\
+			_RB_SET_CHILD(parent, _RB_LDIR, child, field);	\
 		}							\
-		_RB_SET_PARENT(rmin, opar, field);			\
-		opar = _RB_PTR(opar);					\
+		_RB_COPY_PARENT(elm, rmin, field);			\
+		opar = RB_PARENT(elm, field);				\
 	}								\
 	_RB_SWAP_CHILD_OR_ROOT(head, opar, elm, rmin, field);		\
 	if (child != NULL) {						\
-		_RB_SET_PARENT(child, parent, field);			\
+		_RB_REPLACE_PARENT(child, parent, field);		\
 	}								\
 	if (parent != NULL) {						\
-		parent = name##_RB_REMOVE_BALANCE(head, parent, child);	\
+		opar = name##_RB_REMOVE_BALANCE(head, parent, child);	\
+		if (parent == rmin && RB_LEFT(parent, field) == NULL) {	\
+			opar = NULL;					\
+			parent = RB_PARENT(parent, field);		\
+		}							\
 		_RB_AUGMENT_WALK(parent, opar, field);			\
+		if (opar != NULL) {					\
+			(void)RB_AUGMENT_CHECK(opar);			\
+			(void)RB_AUGMENT_CHECK(RB_PARENT(opar, field));	\
+		}							\
 	}								\
 	return (elm);							\
 }
@@ -610,9 +606,7 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,	\
 		elmdir = RB_LEFT(parent, field) == elm ? _RB_LDIR : _RB_RDIR;	\
 		if (_RB_GET_RDIFF(parent, elmdir, field)) {		\
 			/* case (1) */					\
-			TDEBUGF("case 1");\
 			_RB_FLIP_RDIFF(parent, elmdir, field);		\
-			TDEBUGF("rdiff elmdir=%d", _RB_GET_RDIFF(parent, elmdir, field));\
 			return (elm);					\
 		}							\
 		/* case (2) */						\
@@ -621,7 +615,6 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,	\
 		_RB_FLIP_RDIFF(parent, sibdir, field);			\
 		if (_RB_GET_RDIFF(parent, sibdir, field)) {		\
 			/* case (2.1) */				\
-			TDEBUGF("case 2.1");\
 			child = elm;					\
 			elm = parent;					\
 			continue;					\
@@ -634,7 +627,6 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,	\
 		/* case (2.2) */					\
 		if (_RB_GET_RDIFF(elm, sibdir, field) == 0) {		\
 			/* case (2.2b) */				\
-			TDEBUGF("case 2.2b");\
 			_RB_ROTATE(elm, child, elmdir, field);		\
 			if (_RB_GET_RDIFF(child, sibdir, field))	\
 				_RB_FLIP_RDIFF(parent, elmdir, field);	\
@@ -646,10 +638,8 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,	\
 				elm = child;				\
 		} else {						\
 			/* case (2.2a) */				\
-			TDEBUGF("case 2.2a");\
 			child = elm;					\
 		}							\
-		TDEBUGF("before final rotate");\
 		_RB_ROTATE(parent, child, sibdir, field);		\
 		_RB_REPLACE_PARENT(child, gpar, field);			\
 		_RB_SWAP_CHILD_OR_ROOT(head, gpar, parent, child, field);	\
@@ -658,7 +648,7 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,	\
 		(void)RB_AUGMENT_CHECK(parent);				\
 		return (child);						\
 	} while ((parent = gpar) != NULL);				\
-	return (elm);							\
+	return (NULL);							\
 }									\
 									\
 /* Inserts a node into the RB tree */					\
@@ -669,7 +659,7 @@ name##_RB_INSERT_FINISH(struct name *head, struct type *parent,		\
 	struct type *tmp = elm;						\
 	_RB_SET_CHILD(elm, _RB_LDIR, NULL, field);			\
 	_RB_SET_CHILD(elm, _RB_RDIR, NULL, field);			\
-	_RB_SET_CHILD(elm, _RB_PDIR, parent, field);			\
+	_RB_REPLACE_PARENT(elm, parent, field);				\
 	*tmpp = elm;							\
 	if (parent != NULL)						\
 		tmp = name##_RB_INSERT_BALANCE(head, parent, elm);	\
@@ -711,8 +701,7 @@ name##_RB_INSERT_NEXT(struct name *head, struct type *elm, struct type *next)	\
 	_RB_ASSERT((cmp)(elm, next) < 0);				\
 	if (name##_RB_NEXT(elm) != NULL)				\
 		_RB_ASSERT((cmp)(next, name##_RB_NEXT(elm)) < 0);	\
-									\
-	tmp = &RB_RIGHT(elm, field);					\
+	tmpp = &RB_RIGHT(elm, field);					\
 	while ((tmp = *tmpp) != NULL) {					\
 		elm = tmp;						\
 		tmpp = &RB_LEFT(tmp, field);				\
