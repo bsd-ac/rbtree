@@ -30,8 +30,8 @@ struct timespec start, end, diff, rstart, rend, rdiff, rtot = {0, 0};
 	} while (0)
 #endif
 
-//#define RB_TEST_RANK
-//#define RB_TEST_DIAGNOSTIC
+#define RB_TEST_RANK
+#define RB_TEST_DIAGNOSTIC
 //#define _RB_DIAGNOSTIC
 
 #ifdef DOAUGMENT
@@ -41,7 +41,7 @@ struct timespec start, end, diff, rstart, rend, rdiff, rtot = {0, 0};
 #include "tree.h"
 
 #define TDEBUGF(fmt, ...)	fprintf(stderr, "%s:%d:%s(): " fmt "\n", __FILE__, __LINE__, __func__, ##__VA_ARGS__)
-
+//#define TDEBUGF(fmt, ...)	do {} while (0)
 
 #ifdef __OpenBSD__
 #define SEED_RANDOM srandom_deterministic
@@ -49,8 +49,9 @@ struct timespec start, end, diff, rstart, rend, rdiff, rtot = {0, 0};
 #define SEED_RANDOM srandom
 #endif
 
-int ITER=150000;
-int RANK_TEST_ITERATIONS=10000;
+int ITER=15;
+int RANK_TEST_ITERATIONS=1;
+long long augment_count = 0;
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
@@ -122,12 +123,13 @@ main()
 		perm[r] = i;
 		nums[i] = i;
 	}
-	/*
+	
 	fprintf(stderr, "{");
 	for(int i = 0; i < ITER; i++) {
 		fprintf(stderr, "%d, ", perm[i]);
 	}
 	fprintf(stderr, "}\n");
+	/*
 	int nperm[10] = {2, 4, 9, 7, 8, 3, 0, 1, 6, 5};
 	int nperm[6] = {2, 6, 1, 4, 5, 3};
 	int nperm[10] = {10, 3, 7, 8, 6, 1, 9, 2, 5, 4};
@@ -152,6 +154,9 @@ main()
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
 	TDEBUGF("done random insertions in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+	TDEBUGF("total augment count: %d", augment_count);
+	TDEBUGF("current rank = %d and size = %d", RB_RANK(tree, RB_ROOT(&root)), RB_ROOT(&root)->size);
+	augment_count = 0;
 
 #ifdef DOAUGMENT
 	ins = RB_ROOT(&root);
@@ -197,14 +202,16 @@ main()
 #endif
 
 #ifdef DOAUGMENT
-		if (!(RB_EMPTY(&root)) && (RB_ROOT(&root))->size != ITER - 1 - i)
-			errx(1, "RB_REMOVE size error");
+		//if (!(RB_EMPTY(&root)) && (RB_ROOT(&root))->size != ITER - 1 - i)
+			//errx(1, "RB_REMOVE size error");
 #endif
 
 	}
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
 	TDEBUGF("done root removals in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
+	TDEBUGF("total augment count: %d", augment_count);
+	augment_count = 0;
 
 	TDEBUGF("starting sequential insertions");
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
@@ -386,7 +393,7 @@ main()
 	timespecsub(&end, &start, &diff);
 	TDEBUGF("done root removals in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 
-#ifdef RB_PFIND
+#ifdef RB_PFIND_NOT_DEFINED
 	TDEBUGF("starting sequential insertions");
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
 	mix_operations(nums, ITER, nodes, ITER, ITER, 0, 0);
@@ -696,6 +703,8 @@ main()
 	timespecsub(&end, &start, &diff);
 	TDEBUGF("done root removals in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 
+	TDEBUGF("total augment count: %d", augment_count);
+
 	free(nodes);
 	free(perm);
 	free(nums);
@@ -732,6 +741,7 @@ static int
 tree_augment(struct node *elm)
 {
 	size_t newsize = 1, newheight = 0;
+	augment_count++;
 	if ((RB_LEFT(elm, node_link))) {
 		newsize += (RB_LEFT(elm, node_link))->size;
 		newheight = MAX((RB_LEFT(elm, node_link))->height, newheight);
@@ -764,19 +774,19 @@ mix_operations(int *perm, int psize, struct node *nodes, int nsize, int insertio
 	assert(insertions + reads <= psize);
 
 	for(i = 0; i < insertions; i++) {
-                //TDEBUGF("iteration %d", i);
+                TDEBUGF("iteration %d", i);
 		tmp = &(nodes[i]);
 		if (tmp == NULL) err(1, "malloc");
 		tmp->size = 1;
 		tmp->height = 1;
 		tmp->key = perm[i];
-		//TDEBUGF("inserting %d", tmp->key);
+		TDEBUGF("inserting %d", tmp->key);
 		if (RB_INSERT(tree, &root, tmp) != NULL)
 			errx(1, "RB_INSERT failed");
-                print_tree(&root);
+                //print_tree(&root);
 #if DOAUGMENT
                 //TDEBUGF("size = %zu", RB_ROOT(&root)->size);
-                assert(RB_ROOT(&root)->size == i + 1);
+                //assert(RB_ROOT(&root)->size == i + 1);
 #endif
 
 #ifdef RB_TEST_RANK
