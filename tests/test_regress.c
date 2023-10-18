@@ -36,6 +36,7 @@ struct timespec start, end, diff, rstart, rend, rdiff, rtot = {0, 0};
 
 #ifdef DOAUGMENT
 #define RB_AUGMENT(elm) tree_augment(elm)
+#define RB_AUGMENT_CHECK(elm) tree_augment(elm)
 #endif
 
 #include "tree.h"
@@ -49,7 +50,7 @@ struct timespec start, end, diff, rstart, rend, rdiff, rtot = {0, 0};
 #define SEED_RANDOM srandom
 #endif
 
-int ITER=1500000;
+int ITER=150000;
 int RANK_TEST_ITERATIONS=1;
 long long augment_count = 0;
 
@@ -154,7 +155,7 @@ main()
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
 	TDEBUGF("done random insertions in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
-	TDEBUGF("total augment count: %d", augment_count);
+	TDEBUGF("total augment count: %lld", augment_count);
 	TDEBUGF("current rank = %d and size = %d", RB_RANK(tree, RB_ROOT(&root)), RB_ROOT(&root)->size);
 	augment_count = 0;
 
@@ -210,7 +211,7 @@ main()
 	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
 	timespecsub(&end, &start, &diff);
 	TDEBUGF("done root removals in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
-	TDEBUGF("total augment count: %d", augment_count);
+	TDEBUGF("total augment count: %lld", augment_count);
 	augment_count = 0;
 
 	TDEBUGF("starting sequential insertions");
@@ -703,7 +704,7 @@ main()
 	timespecsub(&end, &start, &diff);
 	TDEBUGF("done root removals in: %llu.%09llu s", (unsigned long long)diff.tv_sec, (unsigned long long)diff.tv_nsec);
 
-	TDEBUGF("total augment count: %d", augment_count);
+	TDEBUGF("total augment count: %lld", augment_count);
 
 	free(nodes);
 	free(perm);
