@@ -360,6 +360,7 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,		\
 		if (_RB_GET_RDIFF(parent, sibdir, field)) {			\
 			/* case (2.1) */					\
 			(void)_RB_AUGMENT(elm);					\
+			child = elm;						\
 			elm = parent;						\
 			continue;						\
 		}								\
@@ -367,7 +368,6 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,		\
 		/* case (2.2) */						\
 		if (_RB_GET_RDIFF(elm, sibdir, field) == 0) {			\
 			/* case (2.2b) */					\
-			child = _RB_PTR(_RB_GET_CHILD(elm, sibdir, field));	\
 			_RB_ROTATE(elm, child, elmdir, field);			\
 		} else {							\
 			/* case (2.2a) */					\
