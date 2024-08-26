@@ -333,14 +333,15 @@ name##_RB_RANK(const struct type *elm)						\
 #define _RB_GENERATE_INSERT(name, type, field, cmp, attr)			\
 										\
 attr struct type *								\
-name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,		\
-    struct type *elm)								\
+name##_RB_INSERT_BALANCE(struct name *head, struct type *elm)			\
 {										\
-	struct type *child, *gpar;						\
+	struct type *child, *gpar, *parent;					\
 	uintptr_t elmdir, sibdir;						\
 										\
 	child = NULL;								\
 	gpar = NULL;								\
+	_RB_GET_PARENT(elm, parent, field);					\
+	_RB_STACK_POP(head, parent);						\
 	do {									\
 		/* elm has not been promoted yet */				\
 		_RB_ASSERT(parent != NULL);					\
@@ -390,15 +391,16 @@ name##_RB_INSERT_BALANCE(struct name *head, struct type *parent,		\
 /* Inserts a node into the RB tree */						\
 attr struct type *								\
 name##_RB_INSERT_FINISH(struct name *head, struct type *parent,			\
-    uintptr_t insdir, struct type *elm)					\
+    uintptr_t insdir, struct type *elm)						\
 {										\
 	struct type *tmp = elm;							\
 	_RB_SET_PARENT(elm, parent, field);					\
+	_RB_STACK_PUSH(head, parent);						\
 	if (_RB_GET_CHILD(parent, insdir, field))				\
 		_RB_SET_CHILD(parent, insdir, elm, field);			\
 	else {									\
 		_RB_SET_CHILD(parent, insdir, elm, field);			\
-		tmp = name##_RB_INSERT_BALANCE(head, parent, elm);		\
+		tmp = name##_RB_INSERT_BALANCE(head, elm);			\
 		_RB_STACK_POP(head, parent);					\
 		_RB_GET_PARENT(tmp, parent, field);				\
 	}									\
